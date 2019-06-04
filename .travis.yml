@@ -1,0 +1,24 @@
+language: scala
+scala: 2.11.12
+jdk: openjdk8
+jobs:
+  include:
+  - if: tag IS present
+  exclude:
+  - if: tag IS blank
+services:
+  - docker
+before_install:
+  - bash ./.travis/checkTag.sh $TRAVIS_TAG
+  - docker login -u $BINTRAY_SNOWPLOW_DOCKER_USER -p $BINTRAY_SNOWPLOW_DOCKER_API_KEY snowplow-docker-registry.bintray.io
+  - git clone https://github.com/snowplow/snowplow.git && cd snowplow/2-collectors/scala-stream-collector/ && sbt publishLocal && cd ../../..
+deploy:
+  on:
+    tags: true
+  skip_cleanup: true
+  provider: script
+  script: sbt docker:publish
+env:
+  global:
+  - secure: ASJHEtX50jTjhgeZ7Sp/X1M7txRjyhIEPKamfy19/HExiGiA9RubNdZLLrRO72IauYPlpauDinbFeJbMhbEdziTbNEF9XoWtCEbr6JNqUCBXUbcJT6FgfobVKdT2pIGslXMVDon1/rrW+s+mg7k8xwgcsgzJ6KtYW0e8ZVjzov8T3m06oG296Fo/6XjI7o5E0W+G70uDVPMN/s960o/DBciAQ2+FJDX9nSAVdB8FGfAQQQ0Ul+nxvo69ljX1A2lIh73xS6sa8pi2hcqa1gZQ1hC1gwVJuwFz0w12Cd+67ArshrREbWPmldyLcGpUhIcg+b1xFkYvSVo/6I8qzJoiGoG3/ZcmwMLt7wb74vE87BN9o1qeWZvIfQUfDzyG0m6aBMUw7oNemCgi46xCF8NMwv5kOll0nxivSlAn2UAorhw4exR0B3xG+va/O0pWNTbf8zFVFo7RCfKHL2MKSxL/mwA3peH53H+FaJ5XQ2k6hFPFsIGudN9xm8ySKI0/TG5s1Lr/QAQZCazcYElVk6842eqz2nHEN0D9eE4Yj+7mMYK6MimsGqAk6uXvkYuW4yKCylt1VY9+E1Lsbw9mH09M0YNj2nige7hVTVlUjR3Ddr/+6/3zRgZaOomd7fk+rJGA4SdMHu+Zetanfy9qObAREJgW07nAgPZURPwsNRmaD50=
+  - secure: XtPX8zhcVGLwX7MqA3buBIN50X5TMYn4dDlp/ih4htB7I/0l1ur53VycOUgITsnD4vKITr/c85lRPcjMCn6ic7hzQZELXCXT14Y3L2ELtJfPYdIsAbK92RLajqbTebsGU0BMckxmDW0SZ7eKB6mpdYjpnFwJuRwEV5phOBfr9XJ4QWuM+oGKAiYG8guSTo2HpOgU9O4TKy/pOKNlzYfPSxBQOgdiVk+jcY8Bj+amZtvdjkpADqyJHfN1udkl6j2FTVZFVjwV0L/5REKkSpPuhlW+Q4IBs7nsT92icNcwh8+h0PF7xTFuYC/1IMDZDrqmGMVTw+8jTf8vLdrGnr+99byyp8yLBk0INiSqTAXZYyLK6ckqd3DRlJsV4WyhQA61pJaFqPTtudFGp6b0UUgy3BLFMAuCrayDZMBY7ku+dH7tRdRLNm0IUXMoivdeCJKFNhC8C2+pzq73qWap4ZJX7pYzlq0OX12q9KZlEDcsq1YD4CP0v/qwkAPrqxJYs3nYw2nskXs64f6JPwBZAIxT3ugAzHnZh3jfs9tAqOmnerhmN+YUHTBgmIgUwmUmMIbWlQvZQ7Ph1dis4/aS6rjupaW0ilHDs33sq/7l4pU/8n0nqClEdxfRQJMk8a2V+uMJbifahNvm9xDHq8Jsh55V1ivma2TBYYCp/sGSYGyRbKI=
