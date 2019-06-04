@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) 2019-2019 Snowplow Analytics Ltd. All rights reserved.
+ *
+ * This program is licensed to you under the Apache License Version 2.0,
+ * and you may not use this file except in compliance with the Apache License Version 2.0.
+ * You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the Apache License Version 2.0 is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
+ */
+package com.snowplowanalytics.snowplow.micro
+
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.http.scaladsl.Http
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.{
+  CollectorConfig,
+  CollectorSinks
+}
+import com.snowplowanalytics.iglu.client.Resolver
+import org.slf4j.LoggerFactory
+import com.typesafe.config.Config
+
+/** Read the configuration and instantiate Snowplow Micro,
+  * which acts as a `Collector` and has an in-memory sink
+  * holding the (non-)validated events.
+  */ 
+object Main {
+  lazy val logger = LoggerFactory.getLogger(getClass())
+
+  def main(args: Array[String]): Unit = {
+    val (collectorConf, resolver, akkaConf) = ConfigHelper.parseConfig(args)
+    run(collectorConf, resolver, akkaConf)
+  }
+
+  /** Create the in-memory sink,
+    * get the endpoints for both the collector and to query Snowplow Micro,
+    * and start the HTTP server.
+    */
+  def run(
+    collectorConf: CollectorConfig,
+    resolver: Resolver,
+    akkaConf: Config
+  ): Unit = {
+    implicit val system = ActorSystem.create("snowplow-micro", akkaConf)
+    implicit val materializer = ActorMaterializer()
+    implicit val executionContext = system.dispatcher
+
+    val sinks = CollectorSinks(MemorySink(resolver), MemorySink(resolver))
+
+    val routes = Routing.getMicroRoutes(collectorConf, sinks)
+
+    Http()
+      .bindAndHandle(routes, collectorConf.interface, collectorConf.port)
+      .foreach { binding =>
+        logger.info(s"REST interface bound to ${binding.localAddress}")
+      }
+  }
+}
