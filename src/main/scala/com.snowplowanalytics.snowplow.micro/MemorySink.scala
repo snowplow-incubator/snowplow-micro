@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import scala.collection.JavaConverters._
 
 /** Sink of the collector that Snowplow Micro is.
-  * Contain the functions that are called for each event sent
+  * Contains the functions that are called for each event sent
   * to the collector endpoint.
   * For each event received, it tries to validate it using scala-common-enrich,
   * and then stores the results in memory in [[ValidationCache]].
@@ -39,7 +39,7 @@ private[micro] final case class MemorySink(resolver: Resolver) extends Sink {
 
   val MaxBytes = Long.MaxValue
 
-  /** Main function of a [[Sink]], called for all the events received by a collector. */
+  /** Function of the [[Sink]] called for all the events received by a collector. */
   override def storeRawEvents(events: List[Array[Byte]], key: String) = {
     events.foreach(bytes => processThriftBytes(bytes, resolver))
     Nil
@@ -64,7 +64,7 @@ private[micro] final case class MemorySink(resolver: Resolver) extends Sink {
                 val bad = validationResults.collect { case Failure(error) =>
                   BadEvent(
                     Some(collectorPayload),
-                    List("The event has been successfully validated but an error internal to Snowplow Micro occured.", error)
+                    List("An error occured while extracting the info about the event.", error)
                   )
                 }
                 ValidationCache.addToGood(good)

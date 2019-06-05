@@ -18,7 +18,8 @@ object Dependencies {
     val circe = "0.11.1"
 
     // specs2
-    val specs2 = "4.5.1"
+    val specs2        = "2.3.13"
+    val scalazSpecs2  = "0.2"
   }
 
   // Snowplow stream collector
@@ -29,5 +30,6 @@ object Dependencies {
   val circeGeneric = "io.circe" %% "circe-generic" % V.circe
 
   // specs2
-  val specs2 = "org.specs2" %% "specs2-core" % V.specs2 % Test
+  val specs2       = "org.specs2"    %% "specs2-core"   % V.specs2       % Test
+  val scalazSpecs2 = "org.typelevel" %% "scalaz-specs2" % V.scalazSpecs2 % Test
 }

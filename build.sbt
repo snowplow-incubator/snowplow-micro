@@ -22,7 +22,8 @@ lazy val root = project
       Dependencies.snowplowStreamCollector,
       Dependencies.circeJawn,
       Dependencies.circeGeneric,
-      Dependencies.specs2
+      Dependencies.specs2,
+      Dependencies.scalazSpecs2
     )
   )
   .enablePlugins(BuildInfoPlugin)

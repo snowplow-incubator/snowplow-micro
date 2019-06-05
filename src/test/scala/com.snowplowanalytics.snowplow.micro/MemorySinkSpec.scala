@@ -13,6 +13,7 @@
 package com.snowplowanalytics.snowplow.micro
 
 import org.specs2.mutable.Specification
+import org.specs2.scalaz.ValidationMatchers
 import com.snowplowanalytics.iglu.client.Resolver
 import com.snowplowanalytics.iglu.client.repositories.HttpRepositoryRef
 import com.snowplowanalytics.iglu.client.repositories.RepositoryRefConfig
@@ -26,24 +27,27 @@ import com.snowplowanalytics.snowplow.enrich.common.loaders.{
 }
 import org.joda.time.DateTime
 
-class MemorySinkSpec extends Specification {
+class MemorySinkSpec extends Specification with ValidationMatchers {
 
   private val igluConf = RepositoryRefConfig("Iglu central", 0, List("com.snowplowanalytics"))
   private val resolver = Resolver(100, HttpRepositoryRef(igluConf, "http://iglucentral.com", None))
   private val sink = MemorySink(resolver)
 
   private val eventType = "ue"
-
-  private val ueSchema = "iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1"
+  private val ueSchema = "iglu:com.snowplowanalytics.snowplow/unstruct_event/jsonschema/1-0-0"
+  private val linkClickSchema = "iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1"
+  private val linkClickSDJ = s"""
+  {
+    "schema": "$linkClickSchema",
+     "data": {
+       "targetUrl": "http://a-target-url.com"
+     }
+  }
+  """
   private val ue_pr = s"""
   {
-    "schema": "iglu:com.snowplowanalytics.snowplow/unstruct_event/jsonschema/1-0-0",
-    "data": {
-      "schema": "$ueSchema",
-       "data": {
-         "targetUrl": "http://a-target-url.com"
-       }
-    }
+    "schema": "$ueSchema",
+    "data": $linkClickSDJ
   }
   """
   private val ue_px = encodeBase64Url(ue_pr)
@@ -113,77 +117,140 @@ class MemorySinkSpec extends Specification {
     parameters = params ++ Map("ue_px" -> ue_px, "cx" -> cx)
   )
 
-  "analyzeEvent" >> {
-    "should successfully return the event type, the schema and the contexts of an event" >> {
-      1 shouldEqual 1
+  "extractEventInfo" >> {
+    "should correctly return the event type, the schema and the contexts of an event" >> {
+      val goodEvent = sink.extractEventInfo(rawEventUeprCo)
+      goodEvent must beSuccessful
+      goodEvent.map(_.eventType) must beSuccessful (Some("ue"))
+      goodEvent.map(_.schema) must beSuccessful (Some(linkClickSchema))
+      goodEvent.map(_.contexts) must beSuccessful (Some(List(context1Schema, context2Schema)))
     }
 
-    "should return the error if a problem occurs while reading the schema" >> {
-      1 shouldEqual 1
+    "should return an error if a problem occurs while reading the schema" >> {
+      val event = rawEventUeprCo.copy(
+        parameters = params ++ Map("ue_pr" -> "{ foo }")
+      )
+      sink.extractEventInfo(event) must beFailing
     }
     
-    "should return the error if a problem occurs while reading the contexts" >> {
-      1 shouldEqual 1
+    "should return an error if a problem occurs while reading the contexts" >> {
+      val event = rawEventUeprCo.copy(
+        parameters = rawEventUeprCo.parameters ++ Map("co" -> "{ foo }")
+      )
+      sink.extractEventInfo(event) must beFailing
     }
   }
 
   "getEventType" >> {
     "should correctly return the type of an event" >> {
-      sink.getEventType(rawEventUeprCo) shouldEqual Some(eventType)
+      sink.getEventType(rawEventUeprCo) must_== Some(eventType)
     }
   }
   
   "getEventSchema" >> {
-    "should return the schema for \"ue_pr\"" >> {
-      1 shouldEqual 1
+    "should correctly return the schema for \"ue_pr\"" >> {
+      sink.getEventSchema(rawEventUeprCo) must beSuccessful (Some(linkClickSchema))
     }
     
-    "should return the schema for \"ue_px\"" >> {
-      1 shouldEqual 1
+    "should correctly return the schema for \"ue_px\"" >> {
+      sink.getEventSchema(rawEventUepxCx) must beSuccessful (Some(linkClickSchema))
     }
     
     "should return None if the event isn't of type \"ue\"" >> {
-      1 shouldEqual 1
+      val event = rawEventUeprCo.copy(
+        parameters = rawEventUeprCo.parameters ++ Map("e" -> "pp")
+      )
+      sink.getEventSchema(event) must beSuccessful (None)
     }
     
-    "should return the error if the event is of type \"ue\" but it can't retrieve the schema" >> {
-      1 shouldEqual 1
+    "should return an error if \"ue_pr\" is not correctly formatted" >> {
+      val event = rawEventUeprCo.copy(
+        parameters = rawEventUeprCo.parameters ++ Map("ue_pr" -> "{}")
+      )
+      sink.getEventSchema(event) must beFailing
+    }
+    
+    "should return an error if the event is of type \"ue\" but neither \"ue_pr\" not \"ue_px\" is set" >> {
+      val event = rawEventUeprCo.copy(
+        parameters = rawEventUeprCo.parameters -- List("ue_pr")
+      )
+      sink.getEventSchema(event) must beFailing
     }
   }
 
   "extractSchemaFromSDJ" >> {
     "should correctly extract the schema of a self-describing JSON" >> {
-      sink.getEventSchema(rawEventUeprCo) shouldEqual Success(Some(ueSchema))
+      sink.extractSchemaFromSDJ(linkClickSDJ) must beSuccessful (linkClickSchema)
     }
 
     "should return an error if the schema is not on Iglu" >> {
-      1 shouldEqual 1
+      val sdj = s"""
+      {
+        "schema": "iglu:com.snowplowanalytics.snowplow/non_existing/jsonschema/1-0-0",
+         "data": {
+           "targetUrl": "http://a-target-url.com"
+         }
+      }
+      """
+      sink.extractSchemaFromSDJ(sdj) must beFailing
     }
 
     "should return an error if the json is not correctly formatted" >> {
-      1 shouldEqual 1
+      val sdj = "{ hello }"
+      sink.extractSchemaFromSDJ(sdj) must beFailing
     }
 
     "should return an error if the JSON is correctly formatted but does not contain a schema field" >> {
-      1 shouldEqual 1
+      val sdj = s"""
+      {
+         "data": {
+           "targetUrl": "http://a-target-url.com"
+         }
+      }
+      """
+      sink.extractSchemaFromSDJ(sdj) must beFailing
     }
   }
   
-  "getEventContexts" >> {
-    "should correctly return the schemas for all the not-encoded contexts" >> {
-      1 shouldEqual 1
+  "extractDataFromSDJ" >> {
+    "should correctly return the \"data\" field of a valid self-describing JSON" >> {
+      sink.extractDataFromSDJ(ue_pr).map(_.toString()) must beSuccessful (linkClickSDJ.replaceAll("\\s", ""))
     }
     
-    "should correctly return the schemas for all the base64-encoded contexts" >> {
-      1 shouldEqual 1
+    "should return an error if the self-describing JSON is not valid" >> {
+      val sdj = s"""
+      {
+        "schema": "$linkClickSchema",
+         "data": {
+           "badField": "http://a-target-url.com"
+         }
+      }
+      """
+      sink.extractDataFromSDJ(sdj) must beFailing
+    }
+  }
+
+  "getEventContexts" >> {
+    "should correctly return the contexts (schemas) contained in \"co\"" >> {
+      sink.getEventContexts(rawEventUeprCo) should beSuccessful (Some(List(context1Schema, context2Schema)))
+    }
+    
+    "should correctly return the contexts (schemas) contained in \"cx\"" >> {
+      sink.getEventContexts(rawEventUepxCx) should beSuccessful (Some(List(context1Schema, context2Schema)))
     }
 
     "should not return any schema if the event doesn't have any context" >> {
-      1 shouldEqual 1
+      val event = rawEventUeprCo.copy(
+        parameters = params -- List("co")
+      )
+      sink.getEventContexts(event) should beSuccessful (None)
     }
     
     "should return an error if a problem occurs while trying to read the schemas from the contexts" >> {
-      1 shouldEqual 1
+      val event = rawEventUeprCo.copy(
+        parameters = params ++ Map("co" -> "[{ bad JSON }]")
+      )
+      sink.getEventContexts(event) should beFailing
     }
   }
 }
