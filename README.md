@@ -1,20 +1,29 @@
 # Snowplow Micro
 
-Snowplow Micro is a standalone application whose purpose is to automate the testing of trackers.
-It receives the tracking events, as a collector does, validates them,
-and keeps the results in a cache in memory.
-It then offers a REST API to query these events.
+## 1. What is Snowplow Micro for?
 
-The validation of events uses [Iglu](https://github.com/snowplow/iglu)
-and requires Iglu resolvers to be set.
+Snowplow Micro is built to enable companies running Snowplow to build automated test suites to ensure that new releases of their websites, mobile apps and server-side applications do not break tracking / Snowplow data collection.
 
-An event that was successfully validated will be called a good event, while an event that failed validation will be called a bad event.
+Snowplow Micro is a very small version of a full Snowplow data collection pipeline: small enough that it can be launched by a test suite. Events can be recorded into Snowplow Micro just as they can a full Snowplow pipeline. Micro then exposes an API that can be queried to understand:
 
-## 1. REST API
+* How many events have been received?
+* How many of them were successfully processed vs ended up as "bad" (e.g. because the events failed validation against the corresponding schemas in the [Iglu](https://github.com/snowplow/iglu) Schema Registry)
+* For any events that have successfully processed, what type of events they are, what fields have been recorded etc.
+* For any events that have not been successfully processed, what errors were generated on processing the events. (So these can be surfaced back via the test suite.)
 
-Snowplow Micro offers 4 endpoints to query the cache.
+This means companies can build automated test suites to ensure that specific events in an application generate specific events that are successfully processed by Snowplow.
 
-### 1.1. `/micro/all`: summary
+## 2. How do I run Snowplow Micro??
+
+1. Update [configuration for Iglu resolvers](./example/iglu.json)
+2. Update [configuration for Snowplow Micro](./example/micro.conf)
+3. Run: `sbt "run --collector-config example/micro.conf --iglu example/iglu.json"`
+
+## 3. REST API
+
+Snowplow Micro offers 4 endpoints to query the data recorded.
+
+### 3.1. `/micro/all`: summary
 
 Get a summary with the number of good and bad events currently in the cache.
 
@@ -33,7 +42,7 @@ Example:
 }
 ```
 
-### 1.2. `/micro/good` : good events
+### 3.2. `/micro/good` : good events
 
 Query the good events (events that have been successfully validated).
 
@@ -138,7 +147,7 @@ It can also contain more contexts than the ones specified in the request.
 
 It's not necessary to specify all the fields in a request, only the ones that need to be used for filtering.
 
-### 1.3. `/micro/bad`: bad events
+### 3.3. `/micro/bad`: bad events
 
 Query the bad events (events that failed validation).
 
@@ -219,7 +228,7 @@ List of possible fields for the filters:
 
 It's not necessary to specify all the fields in each request, only the ones that need to be used for filtering.
 
-### 1.4. `/micro/reset`: empty cache
+### 3.4. `/micro/reset`: empty cache
 
 Delete all events from the cache.
 
@@ -237,14 +246,3 @@ Expected:
   "bad": 0
 }
 ```
-
-## 2. Use case
-
-It's very important to keep in mind that Snowplow Micro is designed only to ease the testing of trackers.
-As all the events are kept in memory, it should never be used to receive all the events of a pipeline.
-
-## 3. How to run ?
-
-1. Update [configuration for Iglu resolvers](./example/iglu.json)
-2. Update [configuration for Snowplow Micro](./example/micro.conf)
-3. Run: `sbt "run --collector-config example/micro.conf --iglu example/iglu.json"`
