@@ -37,6 +37,28 @@ private[micro] object ValidationCache {
     ValidationSummary(nbGood + nbBad, nbGood, nbBad)
   }
 
+  /** Add a good event to the cache. */
+  private[micro] def addToGood(events: List[GoodEvent]): Unit =
+    LockGood.synchronized {
+      good = events ++ good
+    }
+
+  /** Add a bad event to the cache. */
+  private[micro] def addToBad(events: List[BadEvent]): Unit =
+    LockBad.synchronized {
+      bad = events ++ bad
+    }
+
+  /** Remove all the events from memory. */
+  private[micro] def reset(): Unit = {
+    LockGood.synchronized {
+      good = List.empty[GoodEvent]
+    }
+    LockBad.synchronized {
+      bad = List.empty[BadEvent]
+    }
+  }
+  
   /** Filter out the good events with the possible filters contained in the HTTP request. */
   private[micro] def filterGood(
     filtersGood: FiltersGood
@@ -74,26 +96,4 @@ private[micro] object ValidationCache {
   private[micro] def keepBadEvent(event: BadEvent, filters: FiltersBad): Boolean =
     filters.vendor.forall(vendor => event.collectorPayload.forall(_ .api.vendor == vendor)) &&
       filters.version.forall(version => event.collectorPayload.forall(_ .api.version == version))
-
-  /** Add a good event to the cache. */
-  private[micro] def addToGood(events: List[GoodEvent]): Unit =
-    LockGood.synchronized {
-      good = events ++ good
-    }
-
-  /** Add a bad event to the cache. */
-  private[micro] def addToBad(events: List[BadEvent]): Unit =
-    LockBad.synchronized {
-      bad = events ++ bad
-    }
-
-  /** Remove all the events from memory. */
-  private[micro] def reset(): Unit = {
-    LockGood.synchronized {
-      good = List.empty[GoodEvent]
-    }
-    LockBad.synchronized {
-      bad = List.empty[BadEvent]
-    }
-  }
 }
