@@ -1,0 +1,15 @@
+language: scala
+scala: 2.11.12
+jdk: oraclejdk8
+script: echo "Do nothing if this is not a tagged release."
+jobs:
+  include:
+  - if: tag IS present
+  exclude:
+  - if: tag IS blank
+deploy:
+  on:
+    tags: true
+  skip_cleanup: true
+  provider: script
+  script: bash ./.travis/deploy.sh

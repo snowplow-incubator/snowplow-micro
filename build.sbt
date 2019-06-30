@@ -3,7 +3,7 @@
   *
   * Unauthorized copying of this file via any medium is strictly prohibited.
   *
-  * Copyright (c) 2018-2019 Snowplow Analytics Ltd. All rights reserved.
+  * Copyright (c) 2019-2019 Snowplow Analytics Ltd. All rights reserved.
   */
 lazy val root = project
   .in(file("."))
@@ -37,8 +37,11 @@ lazy val root = project
     buildInfoPackage := "buildinfo"
   )
 
-enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
-
 packageName in Docker := "snowplow-micro"
 version in Docker := version.value
+maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
+dockerBaseImage := "openjdk:8"
+dockerRepository := Some("snowplow-docker-registry.bintray.io")
+dockerUsername := Some("snowplow")
+dockerUpdateLatest := true
