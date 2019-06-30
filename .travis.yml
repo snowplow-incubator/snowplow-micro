@@ -1,6 +1,6 @@
 language: scala
 scala: 2.11.12
-jdk: oraclejdk8
+jdk: openjdk8
 script: echo "Do nothing if this is not a tagged release."
 jobs:
   include:
