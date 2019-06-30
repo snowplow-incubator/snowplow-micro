@@ -40,9 +40,7 @@ lazy val root = project
 enablePlugins(DockerPlugin)
 packageName in Docker := "snowplow-micro"
 version in Docker := version.value
-workDir in Docker := "/tmp/docker"
 maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
-//dockerBaseImage := "openjdk:8"
 dockerRepository := Some("snowplow-docker-registry.bintray.io")
 dockerUsername := Some("snowplow")
 dockerUpdateLatest := true
