@@ -37,10 +37,19 @@ lazy val root = project
     buildInfoPackage := "buildinfo"
   )
 
+import com.typesafe.sbt.packager.docker._
+enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 packageName in Docker := "snowplow-micro"
 version in Docker := version.value
-maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
 dockerRepository := Some("snowplow-docker-registry.bintray.io")
 dockerUsername := Some("snowplow")
+maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
+dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.1.0"
 dockerUpdateLatest := true
+
+//dockerCommands := Seq(
+//  Cmd("FROM", "openjdk:8"),
+//  Cmd("LABEL", "MAINTAINER=foo"),
+//  ExecCmd("CMD", "echo", "Hello, World from Docker")
+//)
