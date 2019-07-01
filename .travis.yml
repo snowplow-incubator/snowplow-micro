@@ -6,8 +6,10 @@ jobs:
   - if: tag IS present
   exclude:
   - if: tag IS blank
+services:
+  - docker
 before_install:
-  - docker login -u $BINTRAY_SNOWPLOW_GENERIC_USER -p BINTRAY_SNOWPLOW_GENERIC_API_KEY snowplow-docker-registry.bintray.io
+  - echo "$BINTRAY_SNOWPLOW_GENERIC_API_KEY" | docker login -u "$BINTRAY_SNOWPLOW_GENERIC_USER" --password-stdin snowplow-docker-registry.bintray.io
   - git clone https://github.com/snowplow/snowplow.git && cd snowplow/2-collectors/scala-stream-collector/ && sbt publishLocal && cd ../../..
 deploy:
   on:
