@@ -7,7 +7,7 @@ jobs:
   exclude:
   - if: tag IS blank
 before_install:
-  - git clone https://github.com/snowplow/snowplow.git && cd snowplow/2-collectors/scala-stream-collector/ && sbt publishLocal
+  - git clone https://github.com/snowplow/snowplow.git && cd snowplow/2-collectors/scala-stream-collector/ && sbt publishLocal && cd ../../..
 deploy:
   on:
     tags: true
