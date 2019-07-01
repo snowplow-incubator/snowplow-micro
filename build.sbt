@@ -47,9 +47,3 @@ dockerUsername := Some("snowplow")
 maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
 dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.1.0"
 dockerUpdateLatest := true
-
-//dockerCommands := Seq(
-//  Cmd("FROM", "openjdk:8"),
-//  Cmd("LABEL", "MAINTAINER=foo"),
-//  ExecCmd("CMD", "echo", "Hello, World from Docker")
-//)
