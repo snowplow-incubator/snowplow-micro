@@ -11,7 +11,7 @@ lazy val root = project
     name := "snowplow-micro",
     organization := "com.snowplowanalytics.snowplow",
     version := "0.1.0",
-    description := "Receives payloads from trackers, validates them, stores them in-memory and offers REST API to query them",
+    description := "Standalone application to automate testing of trackers",
     scalaVersion := "2.11.12",
     scalacOptions := Settings.compilerOptions,
     javacOptions := Settings.javaCompilerOptions
@@ -40,8 +40,8 @@ lazy val root = project
 import com.typesafe.sbt.packager.docker._
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
-dockerRepository := Some("snowplow-docker-registry.bintray.io")
-packageName in Docker := "snowplow/micro"
+packageName in Docker := "snowplow/snowplow-micro"
+maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
 dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.1.0"
 daemonUser in Docker := "snowplow"
 dockerUpdateLatest := true
