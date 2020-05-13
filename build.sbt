@@ -12,7 +12,7 @@ lazy val root = project
     organization := "com.snowplowanalytics.snowplow",
     version := "0.1.0",
     description := "Standalone application to automate testing of trackers",
-    scalaVersion := "2.11.12",
+    scalaVersion := "2.12.11",
     scalacOptions := Settings.compilerOptions,
     javacOptions := Settings.javaCompilerOptions
   )

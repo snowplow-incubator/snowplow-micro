@@ -1,5 +1,5 @@
 language: scala
-scala: 2.11.12
+scala: 2.12.11
 jdk: openjdk8
 jobs:
   include:
