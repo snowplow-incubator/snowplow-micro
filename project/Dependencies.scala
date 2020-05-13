@@ -18,7 +18,7 @@ object Dependencies {
     val circe = "0.11.1"
 
     // specs2
-    val specs2        = "2.3.13"
+    val specs2        = "4.9.4"
     val scalazSpecs2  = "0.2"
   }
 
