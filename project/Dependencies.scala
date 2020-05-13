@@ -15,7 +15,7 @@ object Dependencies {
     val snowplowStreamCollector = "0.15.0"
 
     // circe
-    val circe = "0.11.1"
+    val circe = "0.13.0"
 
     // specs2
     val specs2        = "4.9.4"
