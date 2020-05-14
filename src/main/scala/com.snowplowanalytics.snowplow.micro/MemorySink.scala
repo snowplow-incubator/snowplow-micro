@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -20,28 +20,37 @@ import com.snowplowanalytics.snowplow.enrich.common.adapters.{
 }
 import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
 import com.snowplowanalytics.snowplow.enrich.common.utils.ConversionUtils.decodeBase64Url
-import com.snowplowanalytics.iglu.client.Resolver
-import com.snowplowanalytics.iglu.client.validation.ValidatableJsonMethods._
-import org.slf4j.LoggerFactory
-import scalaz.{Validation, Success, Failure}
-import com.fasterxml.jackson.databind.JsonNode
-import scala.collection.JavaConverters._
+import com.snowplowanalytics.snowplow.badrows.Processor
+import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.iglu.core.SelfDescribingData
+import com.snowplowanalytics.iglu.core.circe.instances._
+import cats.implicits._
+import cats.Id
+import cats.data.Validated
+import cats.effect.Clock
+import io.circe.Json
+import java.util.concurrent.TimeUnit
 
 /** Sink of the collector that Snowplow Micro is.
   * Contains the functions that are called for each event sent
   * to the collector endpoint.
   * For each event received, it tries to validate it using scala-common-enrich,
   * and then stores the results in memory in [[ValidationCache]].
-  * The events are received as [[CollectorPayload]]s serialized with Thrift.
+  * The events are received as `CollectorPayload`s serialized with Thrift.
   */
-private[micro] final case class MemorySink(resolver: Resolver) extends Sink {
-  implicit val resolv = resolver
+private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends Sink {
+  val MaxBytes = Int.MaxValue
 
-  val MaxBytes = Long.MaxValue
+  implicit val clockProvider: Clock[Id] = new Clock[Id] {
+    final def realTime(unit: TimeUnit): Id[Long] =
+      unit.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
+    final def monotonic(unit: TimeUnit): Id[Long] =
+      unit.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
+  }
 
   /** Function of the [[Sink]] called for all the events received by a collector. */
   override def storeRawEvents(events: List[Array[Byte]], key: String) = {
-    events.foreach(bytes => processThriftBytes(bytes, resolver))
+    events.foreach(bytes => processThriftBytes(bytes, igluClient))
     Nil
   }
 
@@ -51,17 +60,18 @@ private[micro] final case class MemorySink(resolver: Resolver) extends Sink {
     */
   private[micro] def processThriftBytes(
     thriftBytes: Array[Byte],
-    resolver: Resolver
+    igluClient: Client[Id, Json],
+    processor: Processor = Processor("snowplow", "micro")
   ): Unit =
-    ThriftLoader.toCollectorPayload(thriftBytes) match {
-      case Success(maybePayload) =>
+    ThriftLoader.toCollectorPayload(thriftBytes, processor) match {
+      case Validated.Valid(maybePayload) =>
         maybePayload match {
           case Some(collectorPayload) =>
-            AdapterRegistry.toRawEvents(collectorPayload) match {
-              case Success(rawEvents) =>
-                val validationResults = rawEvents.list.map(extractEventInfo)
-                val good = validationResults.collect { case Success(goodEvent) => goodEvent }
-                val bad = validationResults.collect { case Failure(error) =>
+            new AdapterRegistry().toRawEvents(collectorPayload, igluClient, processor) match {
+              case Validated.Valid(rawEvents) =>
+                val validationResults = rawEvents.map(extractEventInfo)
+                val good = validationResults.collect { case Right(goodEvent) => goodEvent }
+                val bad = validationResults.collect { case Left(error) =>
                   BadEvent(
                     Some(collectorPayload),
                     List("An error occured while extracting the info about the event.", error)
@@ -69,16 +79,16 @@ private[micro] final case class MemorySink(resolver: Resolver) extends Sink {
                 }
                 ValidationCache.addToGood(good)
                 ValidationCache.addToBad(bad)
-              case Failure(errors) =>
-                val bad = BadEvent(Some(collectorPayload), List("Error while extracting event(s) from collector payload and validating it/them.") ++ errors.list)
+              case Validated.Invalid(badRow) =>
+                val bad = BadEvent(Some(collectorPayload), List("Error while extracting event(s) from collector payload.") ++ List(badRow.toString()))
                 ValidationCache.addToBad(List(bad))
             }
           case None =>
             val bad = BadEvent(None, List("No payload."))
             ValidationCache.addToBad(List(bad))
         }
-      case Failure(errors) =>
-        val bad = BadEvent(None, List("Can't deserialize Thrift bytes.") ++ errors.list)
+      case Validated.Invalid(errors) =>
+        val bad = BadEvent(None, List("Can't deserialize Thrift bytes.") ++ errors.map(_.toString()).toList)
         ValidationCache.addToBad(List(bad))
     }
 
@@ -86,14 +96,14 @@ private[micro] final case class MemorySink(resolver: Resolver) extends Sink {
     * @return [[GoodEvent]] with the extracted event type, schema and contexts,
     *   or error message if an error occured while retrieving one of them.
     */
-  private[micro] def extractEventInfo(event: RawEvent): Validation[String, GoodEvent] =
+  private[micro] def extractEventInfo(event: RawEvent): Either[String, GoodEvent] =
     getEventSchema(event) match {
-      case Success(schema) =>
+      case Right(schema) =>
         getEventContexts(event).bimap(
           contextsError => s"Error while extracting the contexts of the event: $contextsError",
           contexts => GoodEvent(event, getEventType(event), schema, contexts)
         )
-      case Failure(errorSchema) => Failure(s"Error while extracting the schema of the event: $errorSchema") 
+      case Left(errorSchema) => Left(s"Error while extracting the schema of the event: $errorSchema") 
     }
 
   /** Extract the event type of an event if any (in param "e"). */
@@ -107,7 +117,7 @@ private[micro] final case class MemorySink(resolver: Resolver) extends Sink {
     *   - Error message if the event is of type "ue" and an error occured
     *     while retrieving its schema.
     */
-  private[micro] def getEventSchema(event: RawEvent): Validation[String, Option[String]] =
+  private[micro] def getEventSchema(event: RawEvent): Either[String, Option[String]] =
     event.parameters.get("e") match {
       case Some("ue") =>
         event.parameters.get("ue_pr") match {
@@ -118,89 +128,69 @@ private[micro] final case class MemorySink(resolver: Resolver) extends Sink {
           case None =>
             event.parameters.get("ue_px") match {
               case Some(base64_sdj) =>
-                decodeBase64Url("", base64_sdj)
-                  .flatMap(extractDataFromSDJ)
-                  .flatMap(extractSchemaFromSDJ)
-                  .map(Some(_))
-              case None => Failure("event_type is \"ue\" but neither \"ue_pr\" nor \"ue_px\" is set")
+                decodeBase64Url(base64_sdj) match {
+                  case Left(err) => Left(err)
+                  case Right(sdj) =>
+                    extractDataFromSDJ(sdj)
+                      .flatMap(extractSchemaFromSDJ)
+                      .map(Some(_))
+                }
+              case None => Left("event_type is \"ue\" but neither \"ue_pr\" nor \"ue_px\" is set")
             }
           }
-      case _ => Success(None)
+      case _ => Right(None)
     }
 
-  /** Extract the schema of a self-describing JSON.
-    * @param sdj Self-describing JSON.
-    * @return [[Success]] with the Iglu schema
-    *   or [[Failure]] with the error message if there was a problem.
-    */
-  private[micro] def extractSchemaFromSDJ(sdj: JsonNode): Validation[String, String] =
-    sdj.validateAndIdentifySchema(true).bimap(
-      errors => errors.list.map(_.getMessage()).mkString("; "),
-      schemaAndJson => schemaAndJson._1.toString()
+  private[micro] def stringToSDJ(sdjStr: String): Either[String, SelfDescribingData[Json]] =
+    JsonUtils.extractJson(sdjStr).flatMap { json =>
+      SelfDescribingData.parse(json).leftMap(_.toString())
+    }
+
+  private[micro] def extractSchemaFromSDJ(sdj: String): Either[String, String] =
+    stringToSDJ(sdj).map(_.schema.toSchemaUri)
+
+  private[micro] def extractSchemaFromSDJ(json: Json): Either[String, String] =
+    SelfDescribingData.parse(json).bimap(
+      _.toString(),
+      sdj => sdj.schema.toSchemaUri
     )
 
-  /** Extract the schema of a self-describing JSON.
-    * @param sdj Self-describing JSON.
-    * @return [[Success]] with the Iglu schema
-    *   or [[Failure]] with the error message if there was a problem.
-    */
-  private[micro] def extractSchemaFromSDJ(sdj: String): Validation[String, String] =
-    JsonUtils.extractJson("", sdj)
-      .flatMap(extractSchemaFromSDJ)
+  private[micro] def extractDataFromSDJ(sdj: String): Either[String, Json] =
+    stringToSDJ(sdj).map(_.data)
 
-  /** Extract the data of a self-describing JSON.
-    * @param sdj Self-describing JSON.
-    * @return [[Success]] with the content of the "data" field
-    *   or [[Failure]] with the error message if there was a problem.
-    */
-  private[micro] def extractDataFromSDJ(sdj: String): Validation[String, JsonNode] =
-    JsonUtils.extractJson("", sdj)
-      .flatMap(extractDataFromSDJ)
-
-  /** Extract the data of a self-describing JSON.
-    * @param sdj Self-describing JSON.
-    * @return [[Success]] with the content of the "data" field
-    *   or [[Failure]] with the error message if there was a problem.
-    */
-  private[micro] def extractDataFromSDJ(sdj: JsonNode): Validation[String, JsonNode] =
-    sdj.validate(true)
-      .leftMap(errors => errors.list.map(_.getMessage).mkString("; "))
+  private[micro] def extractDataFromSDJ(json: Json): Either[String, Json] =
+    SelfDescribingData.parse(json).bimap(
+      _.toString(),
+      sdj => sdj.data
+    )
 
   /** Extract the schemas of the contexts of the event, if any.
     * @return - List with Iglu schemas of the contexts of the event, if any.
     *   - [[None]] if the event doesn't contain any context (neither "co" nor "cx" is set).
     *   - Error message if the event has contexts but there was a problem while reading their schema.
     */
-  private[micro] def getEventContexts(event: RawEvent): Validation[String, Option[List[String]]] =
-    (event.parameters.get("co") match {
+  private[micro] def getEventContexts(event: RawEvent): Either[String, Option[List[String]]] =
+    event.parameters.get("co") match {
       case Some(context) =>
-        JsonUtils.extractJson("", context)
-          .map(Some(_))
+        JsonUtils.extractJson(context).map { json =>
+          Some(extractContexts(json))
+        }
       case None =>
         event.parameters.get("cx") match {
           case Some(base64_context) =>
-            decodeBase64Url("", base64_context)
-              .flatMap(jsonStr => JsonUtils.extractJson("", jsonStr))
+            decodeBase64Url(base64_context)
+              .flatMap(JsonUtils.extractJson)
+              .map(extractContexts)
               .map(Some(_))
-          case None => Success(None)
+          case None => Right(None)
         }
-    }).flatMap { // map on the Option[JsonNode]
-      case Some(jsonWithContexts) =>
-        extractDataFromSDJ(jsonWithContexts)
-          .flatMap { jsonNode =>
-            val contextsSchemas = jsonNode.elements().asScala.toList
-              .map(extractSchemaFromSDJ)
-            contextsSchemas.collect {
-              case Failure(error) => error
-            } match {
-              case List() => // no error while getting all the schemas of the context
-                Success(Some(contextsSchemas.collect {
-                  case Success(schema) => schema
-                }))
-              case errors =>
-                Failure(errors.mkString("; "))
-            }
-          }
-        case None => Success(None)
     }
+  
+  private[micro] def extractContexts(json: Json): List[String] =
+    json
+      .asArray
+      .get
+      .toList
+      .map(json => SelfDescribingData.parse(json))
+      .collect { case Right(sdj) => sdj.schema.toSchemaUri }
 }

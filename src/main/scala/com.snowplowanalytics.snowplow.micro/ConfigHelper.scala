@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -12,33 +12,26 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
-import com.snowplowanalytics.iglu.client.Resolver
-import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
-import com.snowplowanalytics.snowplow.collectors.scalastream.model.{
-  CollectorConfig,
-  SinkConfig
-}
+import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorConfig
 import com.typesafe.config.{Config, ConfigFactory}
-import pureconfig.{
-  loadConfigOrThrow,
-  ProductHint,
-  ConfigFieldMapping,
-  CamelCase,
-  FieldCoproductHint
-}
+import pureconfig.loadConfigOrThrow
+import pureconfig.generic.auto._
+import cats.Id
+import io.circe.Json
+import io.circe.syntax._
 import scalaz.{Validation, Success, Failure}
 import scala.io.Source
 import java.io.File
 
-/** Contain functions to parse the command line arguments and the configuration for:
-  * - the collector;
-  * - Akka HTTP;
-  * - Iglu resolver.
+/** Contain functions to parse the command line arguments,
+  * to parse the configuration for the collector, Akka HTTP and Iglu
+  * and to instantiate Iglu client.
   */
 private[micro] object ConfigHelper {
 
   /** Parse the command line arguments and the configuration files. */
-  def parseConfig(args: Array[String]): (CollectorConfig, Resolver, Config) = {
+  def parseConfig(args: Array[String]): (CollectorConfig, Client[Id, Json], Config) = {
     case class MicroConfig(
       collectorConfigFile: File = new File("."),
       igluConfigFile: File = new File(".")
@@ -59,7 +52,7 @@ private[micro] object ConfigHelper {
       opt[File]("iglu")
         .required()
         .valueName("<filename>")
-        .text("Configuration file for Iglu resolver")
+        .text("Configuration file for Iglu igluClient")
         .action((f: File, c: MicroConfig) => c.copy(igluConfigFile = f))
         .validate(f =>
           if (f.exists) success
@@ -77,29 +70,25 @@ private[micro] object ConfigHelper {
     if (!collectorConfig.hasPath("collector"))
       throw new IllegalArgumentException("Config file for collector doesn't contain \"collector\" path")
 
-    val resolver = getResolverFromFile(igluFile) match {
-      case Success(resolver) => resolver
+    val igluClient = getIgluClientFromFile(igluFile) match {
+      case Success(igluClient) => igluClient
       case Failure(e) =>
         throw new IllegalArgumentException(s"Error while reading Iglu config file: $e.")
     }
 
-    implicit def hint[T] =
-      ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
-
-    implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
     (
       loadConfigOrThrow[CollectorConfig](collectorConfig.getConfig("collector")),
-      resolver,
+      igluClient,
       collectorConfig
     )
   }
 
-  /** Instantiate an Iglu resolver from its configuration file. */
-  def getResolverFromFile(igluConfigFile: File): Validation[String, Resolver] = {
-    val fileContent = Source.fromFile(igluConfigFile).mkString
-    JsonUtils
-      .extractJson("", fileContent)
-      .flatMap(json => Resolver.parse(json))
-      .leftMap(_.toString)
+  /** Instantiate an Iglu iglu from its configuration file. */
+  def getIgluClientFromFile(igluConfigFile: File): Validation[String, Client[Id, Json]] = {
+    val fileContent = Source.fromFile(igluConfigFile).mkString.asJson
+    Client.parseDefault[Id](fileContent).value match {
+      case Left(decodingFailure) => Failure(decodingFailure.getMessage())
+      case Right(client) => Success(client)
+    }
   }
 }
