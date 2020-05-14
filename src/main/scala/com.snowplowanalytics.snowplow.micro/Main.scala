@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -19,20 +19,23 @@ import com.snowplowanalytics.snowplow.collectors.scalastream.model.{
   CollectorConfig,
   CollectorSinks
 }
-import com.snowplowanalytics.iglu.client.Resolver
+import com.snowplowanalytics.iglu.client.Client
+import cats.Id
+import io.circe.Json
 import org.slf4j.LoggerFactory
 import com.typesafe.config.Config
 
 /** Read the configuration and instantiate Snowplow Micro,
   * which acts as a `Collector` and has an in-memory sink
-  * holding the (non-)validated events.
+  * holding the valid and invalid events.
+  * It offers an HTTP endpoint to query this sink.
   */ 
 object Main {
   lazy val logger = LoggerFactory.getLogger(getClass())
 
   def main(args: Array[String]): Unit = {
-    val (collectorConf, resolver, akkaConf) = ConfigHelper.parseConfig(args)
-    run(collectorConf, resolver, akkaConf)
+    val (collectorConf, igluClient, akkaConf) = ConfigHelper.parseConfig(args)
+    run(collectorConf, igluClient, akkaConf)
   }
 
   /** Create the in-memory sink,
@@ -41,14 +44,14 @@ object Main {
     */
   def run(
     collectorConf: CollectorConfig,
-    resolver: Resolver,
+    igluClient: Client[Id, Json],
     akkaConf: Config
   ): Unit = {
     implicit val system = ActorSystem.create("snowplow-micro", akkaConf)
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatcher
 
-    val sinks = CollectorSinks(MemorySink(resolver), MemorySink(resolver))
+    val sinks = CollectorSinks(MemorySink(igluClient), MemorySink(igluClient))
 
     val routes = Routing.getMicroRoutes(collectorConf, sinks)
 

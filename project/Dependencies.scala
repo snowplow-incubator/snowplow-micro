@@ -3,7 +3,7 @@
   *
   * Unauthorized copying of this file via any medium is strictly prohibited.
   *
-  * Copyright (c) 2018-2019 Snowplow Analytics Ltd. All rights reserved.
+  * Copyright (c) 2018-2020 Snowplow Analytics Ltd. All rights reserved.
   */
 
 import sbt._
@@ -11,19 +11,20 @@ import sbt._
 object Dependencies {
 
   object V {
-    // Snowplow stream collector
-    val snowplowStreamCollector = "0.15.0"
+    // Snowplow
+    val snowplowStreamCollector = "1.0.1"
+    val snowplowCommonEnrich    = "1.3.0"
 
     // circe
     val circe = "0.13.0"
 
     // specs2
     val specs2        = "4.9.4"
-    val scalazSpecs2  = "0.2"
   }
 
   // Snowplow stream collector
   val snowplowStreamCollector = "com.snowplowanalytics" %% "snowplow-stream-collector-core" % V.snowplowStreamCollector
+  val snowplowCommonEnrich    = "com.snowplowanalytics" %% "snowplow-common-enrich"         % V.snowplowCommonEnrich
    
   // circe
   val circeJawn    = "io.circe" %% "circe-jawn"    % V.circe
@@ -31,5 +32,4 @@ object Dependencies {
 
   // specs2
   val specs2       = "org.specs2"    %% "specs2-core"   % V.specs2       % Test
-  val scalazSpecs2 = "org.typelevel" %% "scalaz-specs2" % V.scalazSpecs2 % Test
 }

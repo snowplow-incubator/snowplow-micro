@@ -3,7 +3,7 @@
   *
   * Unauthorized copying of this file via any medium is strictly prohibited.
   *
-  * Copyright (c) 2019-2019 Snowplow Analytics Ltd. All rights reserved.
+  * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
   */
 lazy val root = project
   .in(file("."))
@@ -20,10 +20,10 @@ lazy val root = project
   .settings(
     libraryDependencies ++= Seq(
       Dependencies.snowplowStreamCollector,
+      Dependencies.snowplowCommonEnrich,
       Dependencies.circeJawn,
       Dependencies.circeGeneric,
-      Dependencies.specs2,
-      Dependencies.scalazSpecs2
+      Dependencies.specs2
     )
   )
   .enablePlugins(BuildInfoPlugin)

@@ -11,7 +11,7 @@ services:
 before_install:
   - bash ./.travis/checkTag.sh $TRAVIS_TAG
   - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-  - git clone https://github.com/snowplow/snowplow.git && cd snowplow/2-collectors/scala-stream-collector/ && sbt publishLocal && cd ../../..
+  - git clone https://github.com/snowplow/snowplow.git && cd snowplow/2-collectors/scala-stream-collector/ && git checkout scala_stream_collector/1.0.1 && sbt publishLocal && cd ../../..
 deploy:
   on:
     tags: true

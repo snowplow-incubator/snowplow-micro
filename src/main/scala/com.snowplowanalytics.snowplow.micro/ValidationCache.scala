@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -11,8 +11,6 @@
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
 package com.snowplowanalytics.snowplow.micro
-
-import com.snowplowanalytics.snowplow.enrich.common.adapters.RawEvent
 
 /** In-memory cache containing the results of the validation (or not) of the tracking events.
   * Good events are stored with their type, their schema and their contexts, if any,
