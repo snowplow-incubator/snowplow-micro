@@ -12,17 +12,23 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
-import com.snowplowanalytics.iglu.client.Client
-import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorConfig
 import com.typesafe.config.{Config, ConfigFactory}
+
 import pureconfig.loadConfigOrThrow
 import pureconfig.generic.auto._
+
 import cats.Id
+import cats.implicits._
+
 import io.circe.Json
-import io.circe.syntax._
-import scalaz.{Validation, Success, Failure}
+import io.circe.parser.parse
+
 import scala.io.Source
+
 import java.io.File
+
+import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorConfig
 
 /** Contain functions to parse the command line arguments,
   * to parse the configuration for the collector, Akka HTTP and Iglu
@@ -71,8 +77,8 @@ private[micro] object ConfigHelper {
       throw new IllegalArgumentException("Config file for collector doesn't contain \"collector\" path")
 
     val igluClient = getIgluClientFromFile(igluFile) match {
-      case Success(igluClient) => igluClient
-      case Failure(e) =>
+      case Right(igluClient) => igluClient
+      case Left(e) =>
         throw new IllegalArgumentException(s"Error while reading Iglu config file: $e.")
     }
 
@@ -83,12 +89,12 @@ private[micro] object ConfigHelper {
     )
   }
 
-  /** Instantiate an Iglu iglu from its configuration file. */
-  def getIgluClientFromFile(igluConfigFile: File): Validation[String, Client[Id, Json]] = {
-    val fileContent = Source.fromFile(igluConfigFile).mkString.asJson
-    Client.parseDefault[Id](fileContent).value match {
-      case Left(decodingFailure) => Failure(decodingFailure.getMessage())
-      case Right(client) => Success(client)
-    }
-  }
+  /** Instantiate an Iglu client from its configuration file. */
+  def getIgluClientFromFile(igluConfigFile: File): Either[String, Client[Id, Json]] =
+    parse(Source.fromFile(igluConfigFile).mkString)
+      .leftMap(_.show)
+      .flatMap(json =>
+        Client.parseDefault[Id](json).value
+          .leftMap(_.getMessage())
+      )
 }

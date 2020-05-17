@@ -12,7 +12,7 @@ object Dependencies {
 
   val resolvers = Seq(
     "Snowplow Bintray" at "https://snowplow.bintray.com/snowplow-maven",
-    "Snowplow Maven " at "https://maven.snplow.com/releases"
+    "Snowplow Maven " at "http://maven.snplow.com/releases"
   )
 
   object V {
@@ -21,7 +21,7 @@ object Dependencies {
     val snowplowCommonEnrich    = "1.3.0"
 
     // circe
-    val circe = "0.13.0"
+    val circe = "0.11.1"
 
     // specs2
     val specs2        = "4.9.4"
