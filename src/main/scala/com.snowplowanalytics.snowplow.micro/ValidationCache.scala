@@ -59,7 +59,7 @@ private[micro] object ValidationCache {
   
   /** Filter out the good events with the possible filters contained in the HTTP request. */
   private[micro] def filterGood(
-    filtersGood: FiltersGood
+    filtersGood: FiltersGood = FiltersGood(None, None, None, None)
   ): List[GoodEvent] =
     LockGood.synchronized {
       val filtered = good.filter(keepGoodEvent(_, filtersGood))
@@ -74,16 +74,11 @@ private[micro] object ValidationCache {
 
   /** Check if an event conntains all the contexts of the list. */
   private[micro] def containsAllContexts(event: GoodEvent, contexts: List[String]): Boolean =
-    event.contexts match {
-      case Some(eventContexts) =>
-        contexts.forall(eventContexts.contains)
-      case None if contexts.isEmpty => true
-      case _ => false
-    }
+    contexts.forall(event.contexts.contains)
 
   /** Filter out the bad events with the possible filters contained in the HTTP request. */
   private[micro] def filterBad(
-    filtersBad: FiltersBad
+    filtersBad: FiltersBad = FiltersBad(None, None, None)
   ): List[BadEvent] =
     LockBad.synchronized {
       val filtered = bad.filter(keepBadEvent(_, filtersBad))

@@ -15,15 +15,18 @@ package com.snowplowanalytics.snowplow.micro
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.http.scaladsl.Http
-import com.snowplowanalytics.snowplow.collectors.scalastream.model.{
-  CollectorConfig,
-  CollectorSinks
-}
-import com.snowplowanalytics.iglu.client.Client
+
 import cats.Id
+
 import io.circe.Json
+
 import org.slf4j.LoggerFactory
+
 import com.typesafe.config.Config
+
+import com.snowplowanalytics.iglu.client.Client
+
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, CollectorSinks}
 
 /** Read the configuration and instantiate Snowplow Micro,
   * which acts as a `Collector` and has an in-memory sink

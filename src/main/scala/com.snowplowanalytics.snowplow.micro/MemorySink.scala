@@ -12,34 +12,43 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
-import com.snowplowanalytics.snowplow.collectors.scalastream.sinks.Sink
-import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
-import com.snowplowanalytics.snowplow.enrich.common.adapters.{
-  AdapterRegistry,
-  RawEvent
-}
-import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
-import com.snowplowanalytics.snowplow.enrich.common.utils.ConversionUtils.decodeBase64Url
-import com.snowplowanalytics.snowplow.badrows.Processor
-import com.snowplowanalytics.iglu.client.Client
-import com.snowplowanalytics.iglu.core.SelfDescribingData
-import com.snowplowanalytics.iglu.core.circe.instances._
 import cats.implicits._
 import cats.Id
 import cats.data.Validated
 import cats.effect.Clock
+
 import io.circe.Json
+
 import java.util.concurrent.TimeUnit
 
+import org.joda.time.DateTime
+
+import com.snowplowanalytics.iglu.client.Client
+
+import com.snowplowanalytics.iglu.core.SelfDescribingData
+import com.snowplowanalytics.iglu.core.circe.instances._
+
+import com.snowplowanalytics.snowplow.collectors.scalastream.sinks.Sink
+
+import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
+import com.snowplowanalytics.snowplow.enrich.common.adapters.{AdapterRegistry, RawEvent}
+import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.{EnrichmentManager, EnrichmentRegistry}
+import com.snowplowanalytics.snowplow.enrich.common.outputs.EnrichedEvent
+
+import com.snowplowanalytics.snowplow.badrows.Processor
+
 /** Sink of the collector that Snowplow Micro is.
-  * Contains the functions that are called for each event sent
+  * Contains the functions that are called for each tracking event sent
   * to the collector endpoint.
-  * For each event received, it tries to validate it using scala-common-enrich,
-  * and then stores the results in memory in [[ValidationCache]].
   * The events are received as `CollectorPayload`s serialized with Thrift.
+  * For each event it tries to validate it using Common Enrich,
+  * and then stores the results in-memory in [[ValidationCache]].
   */
 private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends Sink {
   val MaxBytes = Int.MaxValue
+  private val enrichmentRegistry = new EnrichmentRegistry[Id]()
+  private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
 
   implicit val clockProvider: Clock[Id] = new Clock[Id] {
     final def realTime(unit: TimeUnit): Id[Long] =
@@ -50,18 +59,19 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
 
   /** Function of the [[Sink]] called for all the events received by a collector. */
   override def storeRawEvents(events: List[Array[Byte]], key: String) = {
-    events.foreach(bytes => processThriftBytes(bytes, igluClient))
+    events.foreach(bytes => processThriftBytes(bytes, igluClient, enrichmentRegistry, processor))
     Nil
   }
 
-  /** Deserialize Thrift bytes into [[CollectorPayload]]s,
+  /** Deserialize Thrift bytes into `CollectorPayload`s,
     * validate them and store the result in [[ValidationCache]].
-    * A [[CollectorPayload]] can contain several events.
+    * A `CollectorPayload` can contain several events.
     */
   private[micro] def processThriftBytes(
     thriftBytes: Array[Byte],
     igluClient: Client[Id, Json],
-    processor: Processor = Processor("snowplow", "micro")
+    enrichmentRegistry: EnrichmentRegistry[Id],
+    processor: Processor
   ): Unit =
     ThriftLoader.toCollectorPayload(thriftBytes, processor) match {
       case Validated.Valid(maybePayload) =>
@@ -69,128 +79,78 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
           case Some(collectorPayload) =>
             new AdapterRegistry().toRawEvents(collectorPayload, igluClient, processor) match {
               case Validated.Valid(rawEvents) =>
-                val validationResults = rawEvents.map(extractEventInfo)
-                val good = validationResults.collect { case Right(goodEvent) => goodEvent }
-                val bad = validationResults.collect { case Left(error) =>
-                  BadEvent(
-                    Some(collectorPayload),
-                    List("An error occured while extracting the info about the event.", error)
-                  )
+                val (goodEvents, badEvents) = rawEvents.toList.foldRight((Nil, Nil) : (List[GoodEvent], List[BadEvent])) {
+                  case (rawEvent, (good, bad)) =>
+                    validateEvent(rawEvent, igluClient, enrichmentRegistry, processor) match {
+                      case Right(goodEvent) =>
+                        (goodEvent :: good, bad)
+                      case Left(errors) =>
+                        val badEvent = 
+                        BadEvent(
+                          Some(collectorPayload),
+                          Some(rawEvent),
+                          errors
+                        )
+                        (good, badEvent :: bad)
+                    }
                 }
-                ValidationCache.addToGood(good)
-                ValidationCache.addToBad(bad)
+                ValidationCache.addToGood(goodEvents)
+                ValidationCache.addToBad(badEvents)
               case Validated.Invalid(badRow) =>
-                val bad = BadEvent(Some(collectorPayload), List("Error while extracting event(s) from collector payload.") ++ List(badRow.toString()))
+                val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.toString()))
                 ValidationCache.addToBad(List(bad))
             }
           case None =>
-            val bad = BadEvent(None, List("No payload."))
+            val bad = BadEvent(None, None, List("No payload."))
             ValidationCache.addToBad(List(bad))
         }
-      case Validated.Invalid(errors) =>
-        val bad = BadEvent(None, List("Can't deserialize Thrift bytes.") ++ errors.map(_.toString()).toList)
+      case Validated.Invalid(badRows) =>
+        val bad = BadEvent(None, None, List("Can't deserialize Thrift bytes.") ++ badRows.toList.map(_.compact))
         ValidationCache.addToBad(List(bad))
     }
 
-  /** Extract the event type if any, the schema if any, and the schemas of the contexts if any from the event.
+  /** Validate the raw event using Common Enrich logic, and extract the event type if any,
+    * the schema if any, and the schemas of the contexts attached to the event if any.
     * @return [[GoodEvent]] with the extracted event type, schema and contexts,
-    *   or error message if an error occured while retrieving one of them.
+    *   or error if the event couldn't be validated.
     */
-  private[micro] def extractEventInfo(event: RawEvent): Either[String, GoodEvent] =
-    getEventSchema(event) match {
-      case Right(schema) =>
-        getEventContexts(event).bimap(
-          contextsError => s"Error while extracting the contexts of the event: $contextsError",
-          contexts => GoodEvent(event, getEventType(event), schema, contexts)
-        )
-      case Left(errorSchema) => Left(s"Error while extracting the schema of the event: $errorSchema") 
+  private[micro] def validateEvent(
+    rawEvent: RawEvent,
+    igluClient: Client[Id, Json],
+    enrichmentRegistry: EnrichmentRegistry[Id],
+    processor: Processor
+  ): Either[List[String], GoodEvent] =
+    EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent).value.bimap(
+      badRow => List("Error while validating the event", badRow.compact),
+      enriched => GoodEvent(rawEvent, Option(enriched.event), getEnrichedSchema(enriched), getEnrichedContexts(enriched), enriched)
+    )
+
+  /** Extract the schema of the enriched event. */
+  private[micro] def getEnrichedSchema(enriched: EnrichedEvent): Option[String] = 
+    Option(enriched.event_vendor).map { vendor =>
+      "iglu:" + List(
+        vendor,
+        enriched.event_name,
+        enriched.event_format,
+        enriched.event_version
+      ).mkString("/")
     }
 
-  /** Extract the event type of an event if any (in param "e"). */
-  private[micro] def getEventType(event: RawEvent): Option[String] =
-    event.parameters.get("e")
-
-  /** Extract the schema of a custom unstructured event (type "ue").
-    * @return - [[None]] if the event is not of type "ue".
-    *   - Iglu schema if the event is of type "ue" and it could successfully
-    *     retrieve the schema in "ue_pr" or "ue_px".
-    *   - Error message if the event is of type "ue" and an error occured
-    *     while retrieving its schema.
-    */
-  private[micro] def getEventSchema(event: RawEvent): Either[String, Option[String]] =
-    event.parameters.get("e") match {
-      case Some("ue") =>
-        event.parameters.get("ue_pr") match {
-          case Some(json) =>
-            extractDataFromSDJ(json)
-              .flatMap(extractSchemaFromSDJ)
-              .map(Some(_))
-          case None =>
-            event.parameters.get("ue_px") match {
-              case Some(base64_sdj) =>
-                decodeBase64Url(base64_sdj) match {
-                  case Left(err) => Left(err)
-                  case Right(sdj) =>
-                    extractDataFromSDJ(sdj)
-                      .flatMap(extractSchemaFromSDJ)
-                      .map(Some(_))
-                }
-              case None => Left("event_type is \"ue\" but neither \"ue_pr\" nor \"ue_px\" is set")
+  /** Extract schema URIs of the contexts attached to the event. */
+  private[micro] def getEnrichedContexts(enriched: EnrichedEvent): List[String] = 
+    JsonUtils.extractJson(enriched.contexts) match {
+      case Left(_) => Nil
+      case Right(json) =>
+        SelfDescribingData.parse(json) match {
+          case Left(_) => Nil
+          case Right(sdj) =>
+            val contexts = sdj.data.asArray.get.toList
+            contexts.map { json =>
+              SelfDescribingData.parse(json)
+                .map(_.schema.toSchemaUri)
             }
-          }
-      case _ => Right(None)
-    }
-
-  private[micro] def stringToSDJ(sdjStr: String): Either[String, SelfDescribingData[Json]] =
-    JsonUtils.extractJson(sdjStr).flatMap { json =>
-      SelfDescribingData.parse(json).leftMap(_.toString())
-    }
-
-  private[micro] def extractSchemaFromSDJ(sdj: String): Either[String, String] =
-    stringToSDJ(sdj).map(_.schema.toSchemaUri)
-
-  private[micro] def extractSchemaFromSDJ(json: Json): Either[String, String] =
-    SelfDescribingData.parse(json).bimap(
-      _.toString(),
-      sdj => sdj.schema.toSchemaUri
-    )
-
-  private[micro] def extractDataFromSDJ(sdj: String): Either[String, Json] =
-    stringToSDJ(sdj).map(_.data)
-
-  private[micro] def extractDataFromSDJ(json: Json): Either[String, Json] =
-    SelfDescribingData.parse(json).bimap(
-      _.toString(),
-      sdj => sdj.data
-    )
-
-  /** Extract the schemas of the contexts of the event, if any.
-    * @return - List with Iglu schemas of the contexts of the event, if any.
-    *   - [[None]] if the event doesn't contain any context (neither "co" nor "cx" is set).
-    *   - Error message if the event has contexts but there was a problem while reading their schema.
-    */
-  private[micro] def getEventContexts(event: RawEvent): Either[String, Option[List[String]]] =
-    event.parameters.get("co") match {
-      case Some(context) =>
-        JsonUtils.extractJson(context).map { json =>
-          Some(extractContexts(json))
-        }
-      case None =>
-        event.parameters.get("cx") match {
-          case Some(base64_context) =>
-            decodeBase64Url(base64_context)
-              .flatMap(JsonUtils.extractJson)
-              .map(extractContexts)
-              .map(Some(_))
-          case None => Right(None)
+              .collect { case Right(schema) => schema }
         }
     }
-  
-  private[micro] def extractContexts(json: Json): List[String] =
-    json
-      .asArray
-      .get
-      .toList
-      .map(json => SelfDescribingData.parse(json))
-      .collect { case Right(sdj) => sdj.schema.toSchemaUri }
+    
 }

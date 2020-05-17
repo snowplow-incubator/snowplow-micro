@@ -14,18 +14,21 @@ package com.snowplowanalytics.snowplow.micro
 
 import com.snowplowanalytics.snowplow.enrich.common.adapters.RawEvent
 import com.snowplowanalytics.snowplow.enrich.common.loaders.CollectorPayload
+import com.snowplowanalytics.snowplow.enrich.common.outputs.EnrichedEvent
 
 /** A list of this case class is returned when /micro/good is queried. */
 private [micro] final case class GoodEvent(
-  event: RawEvent,
+  rawEvent: RawEvent,
   eventType: Option[String],
   schema: Option[String],
-  contexts: Option[List[String]]
+  contexts: List[String],
+  enrichedEvent: EnrichedEvent
 )
 
 /** A list of this case class is returned when /micro/bad is queried. */
 private [micro] final case class BadEvent(
   collectorPayload: Option[CollectorPayload],
+  rawEvent: Option[RawEvent],
   errors: List[String]
 )
 
