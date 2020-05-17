@@ -59,8 +59,10 @@ Query the good events (events that have been successfully validated).
 #### Response format
 
 JSON array of [GoodEvent](src/main/scala/com.snowplowanalytics.snowplow.micro/model.scala#L19)s. A `GoodEvent` contains 4 fields:
-- `event`: contains the [RawEvent](https://github.com/snowplow/snowplow/blob/master/3-enrich/scala-common-enrich/src/main/scala/com.snowplowanalytics.snowplow.enrich/common/adapters/RawEvent.scala#L27). It corresponds to the format of a validated event
+- `rawEvent`: contains the [RawEvent](https://github.com/snowplow/snowplow/blob/master/3-enrich/scala-common-enrich/src/main/scala/com.snowplowanalytics.snowplow.enrich/common/adapters/RawEvent.scala#L27). It corresponds to the format of a validated event
 just before being enriched.
+- `enrichedEvent`: contains the [EnrichedEvent](https://github.com/snowplow/enrich/blob/1.3.0/modules/common/src/main/scala/com.snowplowanalytics.snowplow.enrich/common/outputs/EnrichedEvent.scala#L38).
+It is in the format of an event after enrichment, even if all the enrichments are deactivated.
 - `eventType`: type of the event.
 - `schema`: schema of the event in case of an unstructured event.
 - `contexts`: contexts of the event.
@@ -69,7 +71,7 @@ An example of a response with one event can be found below:
 ```json
 [
   {
-    "event": {
+    "rawEvent": {
       "api": {
         "vendor":"com.snowplowanalytics.snowplow",
         "version":"tp2"
@@ -90,34 +92,167 @@ An example of a response with one event can be found below:
       },
       "contentType":"application/json",
       "source": {
-        "name":"ssc-0.15.0-stdout$",
+        "name":"ssc-1.0.1-stdout$",
         "encoding":"UTF-8",
         "hostname":"localhost"
       },
       "context": {
-        "timestamp":"2019-06-03T12:12:15.416Z",
-        "ipAddress":"0:0:0:0:0:0:0:1",
-        "useragent":"curl/7.52.1",
-        "refererUri":null,
-        "headers":[
-          "Host: localhost:9090",
-          "User-Agent: curl/7.52.1",
-          "Accept: */*",
-          "Expect: 100-continue",
-          "Timeout-Access: <function1>",
-          "application/json"
+        "timestamp": "2020-07-29T15:06:00.550Z",
+        "ipAddress": "127.0.0.1",
+        "useragent": "curl/7.68.0",
+        "refererUri": null,
+        "headers": [
+            "Timeout-Access: <function1>",
+            "Host: localhost:9090",
+            "User-Agent: curl/7.68.0",
+            "Accept: */*",
+            "Expect: 100-continue",
+            "application/json"
         ],
-        "userId":"d04c787c-cbd0-420c-811e-8efb2a0b5e8b"
+        "userId": "6bc292ba-8cfd-4865-8dbd-73b974d43f6d"
       }
     },
-    "eventType":"ue",
+    "eventType": "unstruct",
     "schema":"iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1",
     "contexts":[
       "iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-1",
       "iglu:com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-1",
       "iglu:com.snowplowanalytics.mobile/screen/jsonschema/1-0-0",
       "iglu:com.snowplowanalytics.mobile/application/jsonschema/1-0-0"
-    ]
+    ],
+    "enrichedEvent": {
+      "app_id": "DemoID",
+      "platform": "mob",
+      "etl_tstamp": "2020-07-29 15:06:00.557",
+      "collector_tstamp": "2020-07-29 15:06:00.550",
+      "dvce_created_tstamp": "1970-01-17 14:16:31.172",
+      "event": "unstruct",
+      "event_id": "966d4d79-11d9-4fa6-a1a5-6a0bc2d06de1",
+      "txn_id": null,
+      "name_tracker": "SnowplowAndroidTrackerDemo",
+      "v_tracker": "andr-1.1.0",
+      "v_collector": "ssc-1.0.1-stdout$",
+      "v_etl": "snowplow-micro-0.1.0-common-1.3.0",
+      "user_id": null,
+      "user_ipaddress": "127.0.0.1",
+      "user_fingerprint": null,
+      "domain_userid": null,
+      "domain_sessionidx": null,
+      "network_userid": "6bc292ba-8cfd-4865-8dbd-73b974d43f6d",
+      "geo_country": null,
+      "geo_region": null,
+      "geo_city": null,
+      "geo_zipcode": null,
+      "geo_latitude": null,
+      "geo_longitude": null,
+      "geo_region_name": null,
+      "ip_isp": null,
+      "ip_organization": null,
+      "ip_domain": null,
+      "ip_netspeed": null,
+      "page_url": null,
+      "page_title": null,
+      "page_referrer": null,
+      "page_urlscheme": null,
+      "page_urlhost": null,
+      "page_urlport": null,
+      "page_urlpath": null,
+      "page_urlquery": null,
+      "page_urlfragment": null,
+      "refr_urlscheme": null,
+      "refr_urlhost": null,
+      "refr_urlport": null,
+      "refr_urlpath": null,
+      "refr_urlquery": null,
+      "refr_urlfragment": null,
+      "refr_medium": null,
+      "refr_source": null,
+      "refr_term": null,
+      "mkt_medium": null,
+      "mkt_source": null,
+      "mkt_term": null,
+      "mkt_content": null,
+      "mkt_campaign": null,
+      "contexts": "{\"schema\":\"iglu:com.snowplowanalytics.snowplow/contexts/jsonschema/1-0-1\",\"data\":[{\"schema\":\"iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-1\",\"data\":{\"sessionIndex\":2,\"storageMechanism\":\"SQLITE\",\"firstEventId\":\"afe4e97f-493a-4d69-9717-9dd75ee26b08\",\"sessionId\":\"b4431a1f-8013-443e-ae21-2db7409814d8\",\"previousSessionId\":\"aba8eac5-453f-46e3-a507-6d80383d3e66\",\"userId\":\"9addaee4-94a9-4a51-8b70-3c534a6691b9\"}},{\"schema\":\"iglu:com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-1\",\"data\":{\"networkTechnology\":\"LTE\",\"carrier\":\"Turk Telekom\",\"osVersion\":\"8.0.0\",\"osType\":\"android\",\"deviceModel\":\"MI 5\",\"deviceManufacturer\":\"Xiaomi\",\"networkType\":\"mobile\"}},{\"schema\":\"iglu:com.snowplowanalytics.mobile/screen/jsonschema/1-0-0\",\"data\":{\"activity\":\"Demo\",\"name\":\"Demo\",\"id\":\"6dd31127-a6fd-40d2-8391-4b8a6bc9726c\",\"type\":\"Demo\"}},{\"schema\":\"iglu:com.snowplowanalytics.mobile/application/jsonschema/1-0-0\",\"data\":{\"build\":\"3\",\"version\":\"0.3.0\"}}]}",
+      "se_category": null,
+      "se_action": null,
+      "se_label": null,
+      "se_property": null,
+      "se_value": null,
+      "unstruct_event": "{\"schema\":\"iglu:com.snowplowanalytics.snowplow/unstruct_event/jsonschema/1-0-0\",\"data\":{\"schema\":\"iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1\",\"data\":{\"targetUrl\":\"http://a-target-url.com\"}}}",
+      "tr_orderid": null,
+      "tr_affiliation": null,
+      "tr_total": null,
+      "tr_tax": null,
+      "tr_shipping": null,
+      "tr_city": null,
+      "tr_state": null,
+      "tr_country": null,
+      "ti_orderid": null,
+      "ti_sku": null,
+      "ti_name": null,
+      "ti_category": null,
+      "ti_price": null,
+      "ti_quantity": null,
+      "pp_xoffset_min": null,
+      "pp_xoffset_max": null,
+      "pp_yoffset_min": null,
+      "pp_yoffset_max": null,
+      "useragent": "curl/7.68.0",
+      "br_name": null,
+      "br_family": null,
+      "br_version": null,
+      "br_type": null,
+      "br_renderengine": null,
+      "br_lang": "English",
+      "br_features_pdf": null,
+      "br_features_flash": null,
+      "br_features_java": null,
+      "br_features_director": null,
+      "br_features_quicktime": null,
+      "br_features_realplayer": null,
+      "br_features_windowsmedia": null,
+      "br_features_gears": null,
+      "br_features_silverlight": null,
+      "br_cookies": null,
+      "br_colordepth": null,
+      "br_viewwidth": null,
+      "br_viewheight": null,
+      "os_name": null,
+      "os_family": null,
+      "os_manufacturer": null,
+      "os_timezone": "Europe/Istanbul",
+      "dvce_type": null,
+      "dvce_ismobile": null,
+      "dvce_screenwidth": 1080,
+      "dvce_screenheight": 1920,
+      "doc_charset": null,
+      "doc_width": null,
+      "doc_height": null,
+      "tr_currency": null,
+      "tr_total_base": null,
+      "tr_tax_base": null,
+      "tr_shipping_base": null,
+      "ti_currency": null,
+      "ti_price_base": null,
+      "base_currency": null,
+      "geo_timezone": null,
+      "mkt_clickid": null,
+      "mkt_network": null,
+      "etl_tags": null,
+      "dvce_sent_tstamp": null,
+      "refr_domain_userid": null,
+      "refr_dvce_tstamp": null,
+      "derived_contexts": null,
+      "domain_sessionid": null,
+      "derived_tstamp": "2020-07-29 15:06:00.550",
+      "event_vendor": "com.snowplowanalytics.snowplow",
+      "event_name": "link_click",
+      "event_format": "jsonschema",
+      "event_version": "1-0-1",
+      "event_fingerprint": null,
+      "true_tstamp": null
+    }
   }
 ]
 ```

@@ -33,7 +33,6 @@ lazy val root = project
       organization,
       name,
       version,
-      "shortName" -> "snowplow-micro",
       scalaVersion),
     buildInfoPackage := "buildinfo"
   )

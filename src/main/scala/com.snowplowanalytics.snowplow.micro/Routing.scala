@@ -13,17 +13,14 @@
 package com.snowplowanalytics.snowplow.micro
 
 import akka.http.scaladsl.server.Route
-import com.snowplowanalytics.snowplow.collectors.scalastream.model.{
-  CollectorConfig,
-  CollectorSinks
-}
-import com.snowplowanalytics.snowplow.collectors.scalastream.{
-  CollectorRoute,
-  CollectorService
-}
 import akka.http.scaladsl.server.Directives._
-import CirceSupport._
+
 import io.circe.generic.auto._
+
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, CollectorSinks}
+import com.snowplowanalytics.snowplow.collectors.scalastream.{CollectorRoute, CollectorService}
+
+import CirceSupport._
 
 /** Contain definitions of the routes (endpoints) for Snowplow Micro.
   * Make the link between Snowplow Micro endpoints and the functions called.
@@ -36,7 +33,7 @@ import io.circe.generic.auto._
   */
 private[micro] object Routing {
 
-  /** Create [[Route]] for Snowplow Micro, with the endpoints of the collector to receive tracking events
+  /** Create `Route` for Snowplow Micro, with the endpoints of the collector to receive tracking events
     * and the endpoints to query the validated events.
     */
   def getMicroRoutes(
