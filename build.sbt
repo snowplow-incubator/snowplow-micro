@@ -14,7 +14,8 @@ lazy val root = project
     description := "Standalone application to automate testing of trackers",
     scalaVersion := "2.12.11",
     scalacOptions := Settings.compilerOptions,
-    javacOptions := Settings.javaCompilerOptions
+    javacOptions := Settings.javaCompilerOptions,
+    resolvers ++= Dependencies.resolvers
   )
   .settings(Settings.assemblyOptions)
   .settings(

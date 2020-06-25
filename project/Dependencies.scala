@@ -10,6 +10,11 @@ import sbt._
 
 object Dependencies {
 
+  val resolvers = Seq(
+    "Snowplow Bintray" at "https://snowplow.bintray.com/snowplow-maven",
+    "Snowplow Maven " at "https://maven.snplow.com/releases"
+  )
+
   object V {
     // Snowplow
     val snowplowStreamCollector = "1.0.1"
