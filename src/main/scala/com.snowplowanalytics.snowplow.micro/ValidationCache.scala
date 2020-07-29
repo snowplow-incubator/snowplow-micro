@@ -17,11 +17,12 @@ package com.snowplowanalytics.snowplow.micro
   * so that they can be quickly filtered.
   * Bad events are stored with the error message(s) describing what when wrong. 
   */
-private[micro] object ValidationCache {
+private[micro] trait ValidationCache {
+  import ValidationCache._
 
-  private var good = List.empty[GoodEvent]
+  protected var good: List[GoodEvent]
   private object LockGood
-  private var bad = List.empty[BadEvent]
+  protected var bad: List[BadEvent]
   private object LockBad
 
   /** Compute a summary with the number of good and bad events currently in cache. */
@@ -66,16 +67,6 @@ private[micro] object ValidationCache {
       filtered.take(filtersGood.limit.getOrElse(filtered.size))
     }
 
-  /** Check if a good event matches the filters. */
-  private[micro] def keepGoodEvent(event: GoodEvent, filters: FiltersGood): Boolean =
-    filters.event_type.forall(_ == event.eventType) &&
-      filters.schema.forall(filterSchema => event.schema.forall(_ == filterSchema)) &&
-      filters.contexts.forall(containsAllContexts(event, _))
-
-  /** Check if an event conntains all the contexts of the list. */
-  private[micro] def containsAllContexts(event: GoodEvent, contexts: List[String]): Boolean =
-    contexts.forall(event.contexts.contains)
-
   /** Filter out the bad events with the possible filters contained in the HTTP request. */
   private[micro] def filterBad(
     filtersBad: FiltersBad = FiltersBad(None, None, None)
@@ -84,6 +75,22 @@ private[micro] object ValidationCache {
       val filtered = bad.filter(keepBadEvent(_, filtersBad))
       filtered.take(filtersBad.limit.getOrElse(filtered.size))
     }
+
+}
+
+private[micro] object ValidationCache extends ValidationCache {
+  protected var good = List.empty[GoodEvent]
+  protected var bad = List.empty[BadEvent]
+
+  /** Check if a good event matches the filters. */
+  private[micro] def keepGoodEvent(event: GoodEvent, filters: FiltersGood): Boolean =
+    filters.event_type.toSet.subsetOf(event.eventType.toSet) &&
+      filters.schema.toSet.subsetOf(event.schema.toSet) &&
+      filters.contexts.forall(containsAllContexts(event, _))
+
+  /** Check if an event conntains all the contexts of the list. */
+  private[micro] def containsAllContexts(event: GoodEvent, contexts: List[String]): Boolean =
+    contexts.forall(event.contexts.contains)
 
   /** Check if a bad event matches the filters. */
   private[micro] def keepBadEvent(event: BadEvent, filters: FiltersBad): Boolean =
