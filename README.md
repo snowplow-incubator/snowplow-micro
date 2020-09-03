@@ -61,7 +61,7 @@ Query the good events (events that have been successfully validated).
 JSON array of [GoodEvent](src/main/scala/com.snowplowanalytics.snowplow.micro/model.scala#L19)s. A `GoodEvent` contains 4 fields:
 - `rawEvent`: contains the [RawEvent](https://github.com/snowplow/snowplow/blob/master/3-enrich/scala-common-enrich/src/main/scala/com.snowplowanalytics.snowplow.enrich/common/adapters/RawEvent.scala#L27). It corresponds to the format of a validated event
 just before being enriched.
-- `enrichedEvent`: contains the [EnrichedEvent](https://github.com/snowplow/enrich/blob/1.3.0/modules/common/src/main/scala/com.snowplowanalytics.snowplow.enrich/common/outputs/EnrichedEvent.scala#L38).
+- `event`: contains the [canonical snowplow Event](https://github.com/snowplow/snowplow-scala-analytics-sdk/blob/2.0.1/src/main/scala/com.snowplowanalytics.snowplow.analytics.scalasdk/Event.scala#L39).
 It is in the format of an event after enrichment, even if all the enrichments are deactivated.
 - `eventType`: type of the event.
 - `schema`: schema of the event in case of an unstructured event.
@@ -73,72 +73,72 @@ An example of a response with one event can be found below:
   {
     "rawEvent": {
       "api": {
-        "vendor":"com.snowplowanalytics.snowplow",
-        "version":"tp2"
+        "vendor": "com.snowplowanalytics.snowplow",
+        "version": "tp2"
       },
       "parameters": {
-        "e":"ue",
-        "eid":"966d4d79-11d9-4fa6-a1a5-6a0bc2d06de1",
-        "aid":"DemoID",
-        "cx":"ewoJInNjaGVtYSI6ICJpZ2x1OmNvbS5zbm93cGxvd2FuYWx5dGljcy5zbm93cGxvdy9jb250ZXh0cy9qc29uc2NoZW1hLzEtMC0xIiwKCQkiZGF0YSI6IFsKCQl7CgkJCSJzY2hlbWEiOiAiaWdsdTpjb20uc25vd3Bsb3dhbmFseXRpY3Muc25vd3Bsb3cvY2xpZW50X3Nlc3Npb24vanNvbnNjaGVtYS8xLTAtMSIsCgkJCSJkYXRhIjogewoJCQkJInNlc3Npb25JbmRleCI6IDIsCgkJCQkic3RvcmFnZU1lY2hhbmlzbSI6ICJTUUxJVEUiLAoJCQkJImZpcnN0RXZlbnRJZCI6ICJhZmU0ZTk3Zi00OTNhLTRkNjktOTcxNy05ZGQ3NWVlMjZiMDgiLAoJCQkJInNlc3Npb25JZCI6ICJiNDQzMWExZi04MDEzLTQ0M2UtYWUyMS0yZGI3NDA5ODE0ZDgiLAoJCQkJInByZXZpb3VzU2Vzc2lvbklkIjogImFiYThlYWM1LTQ1M2YtNDZlMy1hNTA3LTZkODAzODNkM2U2NiIsCgkJCQkidXNlcklkIjogIjlhZGRhZWU0LTk0YTktNGE1MS04YjcwLTNjNTM0YTY2OTFiOSIKCQkJfQoJCX0sCgkJewoJCQkic2NoZW1hIjogImlnbHU6Y29tLnNub3dwbG93YW5hbHl0aWNzLnNub3dwbG93L21vYmlsZV9jb250ZXh0L2pzb25zY2hlbWEvMS0wLTEiLAoJCQkiZGF0YSI6IHsKCQkJCSJuZXR3b3JrVGVjaG5vbG9neSI6ICJMVEUiLAoJCQkJImNhcnJpZXIiOiAiVHVyayBUZWxla29tIiwKCQkJCSJvc1ZlcnNpb24iOiAiOC4wLjAiLAoJCQkJIm9zVHlwZSI6ICJhbmRyb2lkIiwKCQkJCSJkZXZpY2VNb2RlbCI6ICJNSSA1IiwKCQkJCSJkZXZpY2VNYW51ZmFjdHVyZXIiOiAiWGlhb21pIiwKCQkJCSJuZXR3b3JrVHlwZSI6ICJtb2JpbGUiCgkJCX0KCQl9LAoJCXsKCQkJInNjaGVtYSI6ICJpZ2x1OmNvbS5zbm93cGxvd2FuYWx5dGljcy5tb2JpbGUvc2NyZWVuL2pzb25zY2hlbWEvMS0wLTAiLAoJCQkiZGF0YSI6IHsKCQkJCSJhY3Rpdml0eSI6ICJEZW1vIiwKCQkJCSJuYW1lIjogIkRlbW8iLAoJCQkJImlkIjogIjZkZDMxMTI3LWE2ZmQtNDBkMi04MzkxLTRiOGE2YmM5NzI2YyIsCgkJCQkidHlwZSI6ICJEZW1vIgoJCQl9CgkJfSwKCQl7CgkJCSJzY2hlbWEiOiAiaWdsdTpjb20uc25vd3Bsb3dhbmFseXRpY3MubW9iaWxlL2FwcGxpY2F0aW9uL2pzb25zY2hlbWEvMS0wLTAiLAoJCQkiZGF0YSI6IHsKCQkJCSJidWlsZCI6ICIzIiwKCQkJCSJ2ZXJzaW9uIjogIjAuMy4wIgoJCQl9CgkJfQoJXQp9Cg==",
-        "tna":"SnowplowAndroidTrackerDemo",
-        "tz":"Europe/Istanbul",
-        "tv":"andr-1.1.0",
-        "res":"1080x1920",
-        "p":"mob",
-        "dtm":"1433791172",
-        "lang":"English",
-        "ue_px":"ewogICJzY2hlbWEiOiAiaWdsdTpjb20uc25vd3Bsb3dhbmFseXRpY3Muc25vd3Bsb3cvdW5zdHJ1Y3RfZXZlbnQvanNvbnNjaGVtYS8xLTAtMCIsCiAgICAiZGF0YSI6IHsKICAgICAgInNjaGVtYSI6ICJpZ2x1OmNvbS5zbm93cGxvd2FuYWx5dGljcy5zbm93cGxvdy9saW5rX2NsaWNrL2pzb25zY2hlbWEvMS0wLTEiLAogICAgICAiZGF0YSI6IHsKICAgICAgICAidGFyZ2V0VXJsIjogImh0dHA6Ly9hLXRhcmdldC11cmwuY29tIgogICAgICB9CiAgICB9Cn0K"
+        "e": "ue",
+        "eid": "966d4d79-11d9-4fa6-a1a5-6a0bc2d06de1",
+        "aid": "DemoID",
+        "cx": "ewoJInNjaGVtYSI6ICJpZ2x1OmNvbS5zbm93cGxvd2FuYWx5dGljcy5zbm93cGxvdy9jb250ZXh0cy9qc29uc2NoZW1hLzEtMC0xIiwKCQkiZGF0YSI6IFsKCQl7CgkJCSJzY2hlbWEiOiAiaWdsdTpjb20uc25vd3Bsb3dhbmFseXRpY3Muc25vd3Bsb3cvY2xpZW50X3Nlc3Npb24vanNvbnNjaGVtYS8xLTAtMSIsCgkJCSJkYXRhIjogewoJCQkJInNlc3Npb25JbmRleCI6IDIsCgkJCQkic3RvcmFnZU1lY2hhbmlzbSI6ICJTUUxJVEUiLAoJCQkJImZpcnN0RXZlbnRJZCI6ICJhZmU0ZTk3Zi00OTNhLTRkNjktOTcxNy05ZGQ3NWVlMjZiMDgiLAoJCQkJInNlc3Npb25JZCI6ICJiNDQzMWExZi04MDEzLTQ0M2UtYWUyMS0yZGI3NDA5ODE0ZDgiLAoJCQkJInByZXZpb3VzU2Vzc2lvbklkIjogImFiYThlYWM1LTQ1M2YtNDZlMy1hNTA3LTZkODAzODNkM2U2NiIsCgkJCQkidXNlcklkIjogIjlhZGRhZWU0LTk0YTktNGE1MS04YjcwLTNjNTM0YTY2OTFiOSIKCQkJfQoJCX0sCgkJewoJCQkic2NoZW1hIjogImlnbHU6Y29tLnNub3dwbG93YW5hbHl0aWNzLnNub3dwbG93L21vYmlsZV9jb250ZXh0L2pzb25zY2hlbWEvMS0wLTEiLAoJCQkiZGF0YSI6IHsKCQkJCSJuZXR3b3JrVGVjaG5vbG9neSI6ICJMVEUiLAoJCQkJImNhcnJpZXIiOiAiVHVyayBUZWxla29tIiwKCQkJCSJvc1ZlcnNpb24iOiAiOC4wLjAiLAoJCQkJIm9zVHlwZSI6ICJhbmRyb2lkIiwKCQkJCSJkZXZpY2VNb2RlbCI6ICJNSSA1IiwKCQkJCSJkZXZpY2VNYW51ZmFjdHVyZXIiOiAiWGlhb21pIiwKCQkJCSJuZXR3b3JrVHlwZSI6ICJtb2JpbGUiCgkJCX0KCQl9LAoJCXsKCQkJInNjaGVtYSI6ICJpZ2x1OmNvbS5zbm93cGxvd2FuYWx5dGljcy5tb2JpbGUvc2NyZWVuL2pzb25zY2hlbWEvMS0wLTAiLAoJCQkiZGF0YSI6IHsKCQkJCSJhY3Rpdml0eSI6ICJEZW1vIiwKCQkJCSJuYW1lIjogIkRlbW8iLAoJCQkJImlkIjogIjZkZDMxMTI3LWE2ZmQtNDBkMi04MzkxLTRiOGE2YmM5NzI2YyIsCgkJCQkidHlwZSI6ICJEZW1vIgoJCQl9CgkJfSwKCQl7CgkJCSJzY2hlbWEiOiAiaWdsdTpjb20uc25vd3Bsb3dhbmFseXRpY3MubW9iaWxlL2FwcGxpY2F0aW9uL2pzb25zY2hlbWEvMS0wLTAiLAoJCQkiZGF0YSI6IHsKCQkJCSJidWlsZCI6ICIzIiwKCQkJCSJ2ZXJzaW9uIjogIjAuMy4wIgoJCQl9CgkJfQoJXQp9Cg==",
+        "tna": "SnowplowAndroidTrackerDemo",
+        "tz": "Europe/Istanbul",
+        "tv": "andr-1.1.0",
+        "res": "1080x1920",
+        "p": "mob",
+        "dtm": "1433791172",
+        "lang": "English",
+        "ue_px": "ewogICJzY2hlbWEiOiAiaWdsdTpjb20uc25vd3Bsb3dhbmFseXRpY3Muc25vd3Bsb3cvdW5zdHJ1Y3RfZXZlbnQvanNvbnNjaGVtYS8xLTAtMCIsCiAgICAiZGF0YSI6IHsKICAgICAgInNjaGVtYSI6ICJpZ2x1OmNvbS5zbm93cGxvd2FuYWx5dGljcy5zbm93cGxvdy9saW5rX2NsaWNrL2pzb25zY2hlbWEvMS0wLTEiLAogICAgICAiZGF0YSI6IHsKICAgICAgICAidGFyZ2V0VXJsIjogImh0dHA6Ly9hLXRhcmdldC11cmwuY29tIgogICAgICB9CiAgICB9Cn0K"
       },
-      "contentType":"application/json",
+      "contentType": "application/json",
       "source": {
-        "name":"ssc-1.0.1-stdout$",
-        "encoding":"UTF-8",
-        "hostname":"localhost"
+        "name": "ssc-1.0.1-stdout$",
+        "encoding": "UTF-8",
+        "hostname": "localhost"
       },
       "context": {
-        "timestamp": "2020-07-29T15:06:00.550Z",
+        "timestamp": "2020-09-04T14:23:56.702Z",
         "ipAddress": "127.0.0.1",
         "useragent": "curl/7.68.0",
         "refererUri": null,
         "headers": [
-            "Timeout-Access: <function1>",
-            "Host: localhost:9090",
-            "User-Agent: curl/7.68.0",
-            "Accept: */*",
-            "Expect: 100-continue",
-            "application/json"
+          "Timeout-Access: <function1>",
+          "Host: localhost:9090",
+          "User-Agent: curl/7.68.0",
+          "Accept: */*",
+          "Expect: 100-continue",
+          "application/json"
         ],
-        "userId": "6bc292ba-8cfd-4865-8dbd-73b974d43f6d"
+        "userId": "7189e4ca-e11f-4c7b-aec0-e0401f049416"
       }
     },
     "eventType": "unstruct",
-    "schema":"iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1",
-    "contexts":[
+    "schema": "iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1",
+    "contexts": [
       "iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-1",
       "iglu:com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-1",
       "iglu:com.snowplowanalytics.mobile/screen/jsonschema/1-0-0",
       "iglu:com.snowplowanalytics.mobile/application/jsonschema/1-0-0"
     ],
-    "enrichedEvent": {
+    "event": {
       "app_id": "DemoID",
       "platform": "mob",
-      "etl_tstamp": "2020-07-29 15:06:00.557",
-      "collector_tstamp": "2020-07-29 15:06:00.550",
-      "dvce_created_tstamp": "1970-01-17 14:16:31.172",
+      "etl_tstamp": "2020-09-04T14:23:57.344Z",
+      "collector_tstamp": "2020-09-04T14:23:56.702Z",
+      "dvce_created_tstamp": "1970-01-17T14:16:31.172Z",
       "event": "unstruct",
       "event_id": "966d4d79-11d9-4fa6-a1a5-6a0bc2d06de1",
       "txn_id": null,
       "name_tracker": "SnowplowAndroidTrackerDemo",
       "v_tracker": "andr-1.1.0",
       "v_collector": "ssc-1.0.1-stdout$",
-      "v_etl": "snowplow-micro-0.1.0-common-1.3.0",
+      "v_etl": "snowplow-micro-0.1.0-common-1.3.2",
       "user_id": null,
       "user_ipaddress": "127.0.0.1",
       "user_fingerprint": null,
       "domain_userid": null,
       "domain_sessionidx": null,
-      "network_userid": "6bc292ba-8cfd-4865-8dbd-73b974d43f6d",
+      "network_userid": "7189e4ca-e11f-4c7b-aec0-e0401f049416",
       "geo_country": null,
       "geo_region": null,
       "geo_city": null,
@@ -173,13 +173,64 @@ An example of a response with one event can be found below:
       "mkt_term": null,
       "mkt_content": null,
       "mkt_campaign": null,
-      "contexts": "{\"schema\":\"iglu:com.snowplowanalytics.snowplow/contexts/jsonschema/1-0-1\",\"data\":[{\"schema\":\"iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-1\",\"data\":{\"sessionIndex\":2,\"storageMechanism\":\"SQLITE\",\"firstEventId\":\"afe4e97f-493a-4d69-9717-9dd75ee26b08\",\"sessionId\":\"b4431a1f-8013-443e-ae21-2db7409814d8\",\"previousSessionId\":\"aba8eac5-453f-46e3-a507-6d80383d3e66\",\"userId\":\"9addaee4-94a9-4a51-8b70-3c534a6691b9\"}},{\"schema\":\"iglu:com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-1\",\"data\":{\"networkTechnology\":\"LTE\",\"carrier\":\"Turk Telekom\",\"osVersion\":\"8.0.0\",\"osType\":\"android\",\"deviceModel\":\"MI 5\",\"deviceManufacturer\":\"Xiaomi\",\"networkType\":\"mobile\"}},{\"schema\":\"iglu:com.snowplowanalytics.mobile/screen/jsonschema/1-0-0\",\"data\":{\"activity\":\"Demo\",\"name\":\"Demo\",\"id\":\"6dd31127-a6fd-40d2-8391-4b8a6bc9726c\",\"type\":\"Demo\"}},{\"schema\":\"iglu:com.snowplowanalytics.mobile/application/jsonschema/1-0-0\",\"data\":{\"build\":\"3\",\"version\":\"0.3.0\"}}]}",
+      "contexts": {
+        "schema": "iglu:com.snowplowanalytics.snowplow/contexts/jsonschema/1-0-0",
+        "data": [
+          {
+            "schema": "iglu:com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-1",
+            "data": {
+              "sessionIndex": 2,
+              "storageMechanism": "SQLITE",
+              "firstEventId": "afe4e97f-493a-4d69-9717-9dd75ee26b08",
+              "sessionId": "b4431a1f-8013-443e-ae21-2db7409814d8",
+              "previousSessionId": "aba8eac5-453f-46e3-a507-6d80383d3e66",
+              "userId": "9addaee4-94a9-4a51-8b70-3c534a6691b9"
+            }
+          },
+          {
+            "schema": "iglu:com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-1",
+            "data": {
+              "networkTechnology": "LTE",
+              "carrier": "Turk Telekom",
+              "osVersion": "8.0.0",
+              "osType": "android",
+              "deviceModel": "MI 5",
+              "deviceManufacturer": "Xiaomi",
+              "networkType": "mobile"
+            }
+          },
+          {
+            "schema": "iglu:com.snowplowanalytics.mobile/screen/jsonschema/1-0-0",
+            "data": {
+              "activity": "Demo",
+              "name": "Demo",
+              "id": "6dd31127-a6fd-40d2-8391-4b8a6bc9726c",
+              "type": "Demo"
+            }
+          },
+          {
+            "schema": "iglu:com.snowplowanalytics.mobile/application/jsonschema/1-0-0",
+            "data": {
+              "build": "3",
+              "version": "0.3.0"
+            }
+          }
+        ]
+      },
       "se_category": null,
       "se_action": null,
       "se_label": null,
       "se_property": null,
       "se_value": null,
-      "unstruct_event": "{\"schema\":\"iglu:com.snowplowanalytics.snowplow/unstruct_event/jsonschema/1-0-0\",\"data\":{\"schema\":\"iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1\",\"data\":{\"targetUrl\":\"http://a-target-url.com\"}}}",
+      "unstruct_event": {
+        "schema": "iglu:com.snowplowanalytics.snowplow/unstruct_event/jsonschema/1-0-0",
+        "data": {
+          "schema": "iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1",
+          "data": {
+            "targetUrl": "http://a-target-url.com"
+          }
+        }
+      },
       "tr_orderid": null,
       "tr_affiliation": null,
       "tr_total": null,
@@ -243,9 +294,9 @@ An example of a response with one event can be found below:
       "dvce_sent_tstamp": null,
       "refr_domain_userid": null,
       "refr_dvce_tstamp": null,
-      "derived_contexts": null,
+      "derived_contexts": {},
       "domain_sessionid": null,
-      "derived_tstamp": "2020-07-29 15:06:00.550",
+      "derived_tstamp": "2020-09-04T14:23:56.702Z",
       "event_vendor": "com.snowplowanalytics.snowplow",
       "event_name": "link_click",
       "event_format": "jsonschema",

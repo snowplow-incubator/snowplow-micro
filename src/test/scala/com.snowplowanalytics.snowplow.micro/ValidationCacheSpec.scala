@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2019 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -15,7 +15,10 @@ package com.snowplowanalytics.snowplow.micro
 import org.specs2.mutable.Specification
 
 import com.snowplowanalytics.snowplow.enrich.common.loaders.CollectorPayload
-import com.snowplowanalytics.snowplow.enrich.common.outputs.EnrichedEvent
+import com.snowplowanalytics.snowplow.analytics.scalasdk.Event
+
+import java.util.UUID
+import java.time.Instant
 
 class ValidationCacheSpec extends Specification {
   import ValidationCacheSpec._
@@ -314,7 +317,7 @@ object ValidationCacheSpec {
       Some("type1"),
       Some("com.snowplowanalytics.example1"),
       List("com.snowplowanalytics.context1a", "com.snowplowanalytics.context1b"),
-      new EnrichedEvent()
+      Event.minimal(UUID.randomUUID, Instant.now, "collector1", "etl1")
     )
 
   val GoodEvent2: GoodEvent = 
@@ -323,7 +326,7 @@ object ValidationCacheSpec {
       Some("type2"),
       Some("com.snowplowanalytics.example2"),
       List("com.snowplowanalytics.context2a", "com.snowplowanalytics.context2b"),
-      new EnrichedEvent()
+      Event.minimal(UUID.randomUUID, Instant.now, "collector1", "etl1")
     )
 
   val CollectorPayload1: CollectorPayload =
