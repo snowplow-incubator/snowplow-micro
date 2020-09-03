@@ -25,15 +25,12 @@ import org.joda.time.DateTime
 
 import com.snowplowanalytics.iglu.client.Client
 
-import com.snowplowanalytics.iglu.core.SelfDescribingData
-import com.snowplowanalytics.iglu.core.circe.instances._
-
+import com.snowplowanalytics.snowplow.analytics.scalasdk.{Event, EventConverter}
+import com.snowplowanalytics.snowplow.badrows.{BadRow, Payload}
 import com.snowplowanalytics.snowplow.collectors.scalastream.sinks.Sink
-
-import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
 import com.snowplowanalytics.snowplow.enrich.common.adapters.{AdapterRegistry, RawEvent}
-import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.{EnrichmentManager, EnrichmentRegistry}
+import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
 import com.snowplowanalytics.snowplow.enrich.common.outputs.EnrichedEvent
 
 import com.snowplowanalytics.snowplow.badrows.Processor
@@ -120,37 +117,27 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
     enrichmentRegistry: EnrichmentRegistry[Id],
     processor: Processor
   ): Either[List[String], GoodEvent] =
-    EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent).value.bimap(
+    EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent)
+      .subflatMap { enriched =>
+        EventConverter.fromEnriched(enriched)
+          .leftMap { failure =>
+            BadRow.LoaderParsingError(processor, failure, Payload.RawPayload(enrichedToTsv(enriched)))
+          }
+          .toEither
+      }
+      .value.bimap(
       badRow => List("Error while validating the event", badRow.compact),
-      enriched => GoodEvent(rawEvent, Option(enriched.event), getEnrichedSchema(enriched), getEnrichedContexts(enriched), enriched)
+      enriched => GoodEvent(rawEvent, enriched.event, getEnrichedSchema(enriched), getEnrichedContexts(enriched), enriched)
     )
 
-  /** Extract the schema of the enriched event. */
-  private[micro] def getEnrichedSchema(enriched: EnrichedEvent): Option[String] = 
-    Option(enriched.event_vendor).map { vendor =>
-      "iglu:" + List(
-        vendor,
-        enriched.event_name,
-        enriched.event_format,
-        enriched.event_version
-      ).mkString("/")
-    }
+  private[micro] def getEnrichedSchema(enriched: Event): Option[String] = 
+    List(enriched.event_vendor, enriched.event_name, enriched.event_format, enriched.event_version)
+      .sequence
+      .map(_.mkString("iglu:", "/", ""))
 
-  /** Extract schema URIs of the contexts attached to the event. */
-  private[micro] def getEnrichedContexts(enriched: EnrichedEvent): List[String] = 
-    JsonUtils.extractJson(enriched.contexts) match {
-      case Left(_) => Nil
-      case Right(json) =>
-        SelfDescribingData.parse(json) match {
-          case Left(_) => Nil
-          case Right(sdj) =>
-            val contexts = sdj.data.asArray.get.toList
-            contexts.map { json =>
-              SelfDescribingData.parse(json)
-                .map(_.schema.toSchemaUri)
-            }
-              .collect { case Right(schema) => schema }
-        }
-    }
-    
+  private[micro] def getEnrichedContexts(enriched: Event): List[String] =
+    enriched.contexts.data.map(_.schema.toSchemaUri)
+
+  private[micro] def enrichedToTsv(enriched: EnrichedEvent): String = ???
+
 }
