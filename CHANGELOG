@@ -1,0 +1,11 @@
+Version 1.0.0 (2020-09-10)
+--------------------------
+Return good events in the canonical event format (#28)
+Fix filtering on event_type and schema (#24)
+Use EnrichmentManager.enrichEvent to validate events (#23)
+Add Snowplow Bintray and Snowplow Maven to resolvers (#26)
+Bump sbt to 1.3.12 (#25)
+Bump snowplow-stream-collector-core to 1.0.1 (#22)
+Bump circe to 0.13.0 (#21)
+Bump specs2-core to 4.9.4 (#20)
+Bump Scala version to 2.12.11 (#10)
