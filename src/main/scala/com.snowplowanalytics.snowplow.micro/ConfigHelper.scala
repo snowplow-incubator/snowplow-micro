@@ -14,7 +14,8 @@ package com.snowplowanalytics.snowplow.micro
 
 import com.typesafe.config.{Config, ConfigFactory}
 
-import pureconfig.loadConfigOrThrow
+import pureconfig.{loadConfigOrThrow, ConfigFieldMapping, CamelCase}
+import pureconfig.generic.{ProductHint, FieldCoproductHint}
 import pureconfig.generic.auto._
 
 import cats.Id
@@ -28,13 +29,18 @@ import scala.io.Source
 import java.io.File
 
 import com.snowplowanalytics.iglu.client.Client
-import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorConfig
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, SinkConfig}
 
 /** Contain functions to parse the command line arguments,
   * to parse the configuration for the collector, Akka HTTP and Iglu
   * and to instantiate Iglu client.
   */
 private[micro] object ConfigHelper {
+
+  implicit def hint[T] =
+    ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+
+  implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
 
   /** Parse the command line arguments and the configuration files. */
   def parseConfig(args: Array[String]): (CollectorConfig, Client[Id, Json], Config) = {
