@@ -1,5 +1,6 @@
-Version 1.0.0 (2020-09-10)
+Version 1.0.0 (2020-09-11)
 --------------------------
+Config file should contain camel case field names (#30)
 Return good events in the canonical event format (#28)
 Fix filtering on event_type and schema (#24)
 Use EnrichmentManager.enrichEvent to validate events (#23)
