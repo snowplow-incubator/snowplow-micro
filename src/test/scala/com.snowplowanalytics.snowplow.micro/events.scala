@@ -89,7 +89,7 @@ object events {
 
     RawEvent(
       collectorApi,
-      params,
+      params.map({ case (k, v) => (k, Option(v)) }),
       contentType = None,
       Source("Micro", "UTF-8", Some("localhost")),
       Context(
