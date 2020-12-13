@@ -1,3 +1,11 @@
+Version 1.1.0 (2020-12-14)
+--------------------------
+Bump stream-collector to 2.1.0 (#32)
+Bump enrich to 1.4.2 (#33)
+Bump sbt to 1.4.4 (#36)
+Bump snowplow/base-debian to 0.2.1 (#35)
+Switch to Github Actions (#34)
+
 Version 1.0.0 (2020-09-11)
 --------------------------
 Config file should contain camel case field names (#30)
