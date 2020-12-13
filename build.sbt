@@ -10,7 +10,7 @@ lazy val root = project
   .settings(
     name := "snowplow-micro",
     organization := "com.snowplowanalytics.snowplow",
-    version := "1.1.0",
+    version := "1.1.0-rc1",
     description := "Standalone application to automate testing of trackers",
     scalaVersion := "2.12.11",
     scalacOptions := Settings.compilerOptions,
