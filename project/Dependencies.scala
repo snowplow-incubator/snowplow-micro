@@ -12,7 +12,7 @@ object Dependencies {
 
   val resolvers = Seq(
     "Snowplow Bintray" at "https://snowplow.bintray.com/snowplow-maven",
-    "Snowplow Maven " at "http://maven.snplow.com/releases"
+    ("Snowplow Maven" at "http://maven.snplow.com/releases/").withAllowInsecureProtocol(true)
   )
 
   object V {

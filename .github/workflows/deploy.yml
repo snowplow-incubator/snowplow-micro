@@ -1,0 +1,49 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+    - 'micro-*.*.*'
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+
+    - name: Publish collector locally
+      run: |
+        git clone --branch 2.1.0 --depth 1 https://github.com/snowplow/stream-collector.git
+        cd stream-collector
+        sbt publishLocal
+
+    - name: Run sbt
+      run: sbt test
+
+    - name: Get tag and tracker version information
+      id: version
+      run: |
+        echo ::set-output name=TAG_VERSION::${GITHUB_REF#refs/*/}
+        echo "##[set-output name=MICRO_VERSION;]$(sbt version -Dsbt.log.noformat=true | perl -ne 'print "$1\n" if /info.*(\d+\.\d+\.\d+[^\r\n]*)/' | tail -n 1 | tr -d '\n')"
+    
+    - name: Fail if version mismatch
+      if: ${{ steps.version.outputs.TAG_VERSION != format('micro-{0}', steps.version.outputs.MICRO_VERSION) }}
+      run: |
+        echo "Tag version (${{ steps.version.outputs.TAG_VERSION }}) doesn't match version in project (${{ format('micro-{0}', steps.version.outputs.MICRO_VERSION) }})"
+        exit 1
+
+    - name: Publish
+      if: success()
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+        sbt docker:publish
