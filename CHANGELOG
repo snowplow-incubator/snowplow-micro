@@ -1,3 +1,15 @@
+Version 1.1.2 (2020-05-11)
+--------------------------
+Bump snowplow-common-enrich to 2.0.1 (#41)
+Remove bintray resolver (#42)
+Publish assembled jar to github release (#44)
+Add Snyk monitor as github action (#46)
+Bump stream-collector to 2.3.0 (#48)
+
+Version 1.1.1 (2020-03-30)
+--------------------------
+Bump stream-collector to 2.2.1 (#38)
+
 Version 1.1.0 (2020-12-14)
 --------------------------
 Bump stream-collector to 2.1.0 (#32)
