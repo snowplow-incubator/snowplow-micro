@@ -26,7 +26,7 @@ Snowplow Micro is hosted on Docker Hub : [snowplow/snowplow-micro](https://cloud
 1. Update [configuration for Iglu resolvers](./example/iglu.json)
 1. The configuration files must be placed in a folder that is mounted in the Docker container, and the port configured for Micro needs to be exposed. Example with configuration files in `./example/` and port `9090`:
 ```
-$ docker run --mount type=bind,source=$(pwd)/example,destination=/config -p 9090:9090 snowplow/snowplow-micro:1.1.1 --collector-config /config/micro.conf --iglu /config/iglu.json
+$ docker run --mount type=bind,source=$(pwd)/example,destination=/config -p 9090:9090 snowplow/snowplow-micro:1.1.2 --collector-config /config/micro.conf --iglu /config/iglu.json
 ```
 
 #### Using Java
