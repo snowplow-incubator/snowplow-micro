@@ -18,6 +18,8 @@ This means companies can build automated test suites to ensure that specific eve
 
 ## 2. How do I run Snowplow Micro??
 
+#### Using Docker
+
 Snowplow Micro is hosted on Docker Hub : [snowplow/snowplow-micro](https://cloud.docker.com/u/snowplow/repository/docker/snowplow/snowplow-micro/general).
 
 1. Update [configuration for Snowplow Micro](./example/micro.conf)
@@ -25,6 +27,13 @@ Snowplow Micro is hosted on Docker Hub : [snowplow/snowplow-micro](https://cloud
 1. The configuration files must be placed in a folder that is mounted in the Docker container, and the port configured for Micro needs to be exposed. Example with configuration files in `./example/` and port `9090`:
 ```
 $ docker run --mount type=bind,source=$(pwd)/example,destination=/config -p 9090:9090 snowplow/snowplow-micro:1.1.1 --collector-config /config/micro.conf --iglu /config/iglu.json
+```
+
+#### Using Java
+
+Alternatively, a Snowplow Micro jar file is hosted on the [Github release page](https://github.com/snowplow-incubator/snowplow-micro/releases/tag/micro-1.1.2)
+```
+java -jar snowplow-micro-1.1.2.jar --collector-config example/micro.conf --iglu example/iglu.json
 ```
 
 ## 3. REST API
