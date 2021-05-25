@@ -16,7 +16,7 @@ object Dependencies {
 
   object V {
     // Snowplow
-    val snowplowStreamCollector = "2.2.1"
+    val snowplowStreamCollector = "2.3.0"
     val snowplowCommonEnrich    = "2.0.1"
 
     // circe

@@ -14,7 +14,7 @@ package com.snowplowanalytics.snowplow.micro
 
 import com.typesafe.config.{Config, ConfigFactory}
 
-import pureconfig.{loadConfigOrThrow, ConfigFieldMapping, CamelCase}
+import pureconfig.{ConfigFieldMapping, CamelCase, ConfigSource}
 import pureconfig.generic.{ProductHint, FieldCoproductHint}
 import pureconfig.generic.auto._
 
@@ -89,7 +89,7 @@ private[micro] object ConfigHelper {
     }
 
     (
-      loadConfigOrThrow[CollectorConfig](collectorConfig.getConfig("collector")),
+      ConfigSource.fromConfig(collectorConfig.getConfig("collector")).loadOrThrow[CollectorConfig],
       igluClient,
       collectorConfig
     )
