@@ -36,6 +36,26 @@ Alternatively, a Snowplow Micro jar file is hosted on the [Github release page](
 java -jar snowplow-micro-1.1.2.jar --collector-config example/micro.conf --iglu example/iglu.json
 ```
 
+#### Use custom schemas from local folder
+
+If `schemas/` folder holding the Iglu schemas is in `$(pwd)/iglu-schemas/`, this parameter must be added to `docker run`:
+`--mount type=bind,source=$(pwd)/iglu-schemas,destination=/iglu-schemas`.
+
+The container embeds an HTTP server that serves `/iglu-schemas` and listens to `8080`.
+These lines must be added to the resolver:
+```
+{
+  "name": "Micro's Iglu /iglu-schemas",
+  "priority": 100,
+  "vendorPrefixes": [ "com.snowplowanalytics" ],
+  "connection": {
+    "http": {
+      "uri": "http://localhost:8080"
+    }
+  }
+}
+```
+
 ## 3. REST API
 
 Snowplow Micro offers 4 endpoints to query the data recorded.

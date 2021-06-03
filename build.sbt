@@ -36,12 +36,19 @@ lazy val root = project
       scalaVersion),
     buildInfoPackage := "buildinfo"
   )
-
 import com.typesafe.sbt.packager.docker._
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 packageName in Docker := "snowplow/snowplow-micro"
 maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
-dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.2.1"
+dockerBaseImage := "snowplow/base-debian:0.2.1"
 daemonUser in Docker := "snowplow"
 dockerUpdateLatest := true
+mappings in Universal += (file(s"${baseDirectory.value}/entrypoint.sh") -> "entrypoint.sh")
+dockerCommands ++= Seq(
+  Cmd("USER", "root"),
+  Cmd("RUN", "apt-get", "update"),
+  Cmd("RUN", "apt-get", "install", "-y", "python3"),
+  Cmd("COPY", "/opt/docker/entrypoint.sh", "/entrypoint.sh"),
+  Cmd("ENTRYPOINT", "[\"bash\", \"/entrypoint.sh\"]")
+)

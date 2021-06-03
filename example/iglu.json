@@ -12,6 +12,16 @@
               "uri": "http://iglucentral.com"
             }
           }
+        },
+        {
+          "name": "Micro's Iglu /iglu-schemas",
+          "priority": 100,
+          "vendorPrefixes": [ "com.snowplowanalytics" ],
+          "connection": {
+            "http": {
+              "uri": "http://localhost:8080"
+            }
+          }
         }
       ]
     }
