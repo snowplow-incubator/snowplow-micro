@@ -56,6 +56,8 @@ These lines must be added to the resolver:
 }
 ```
 
+It's possible to override the default `8080` by adding `-e IGLU_PORT=xxx` to `docker run` command.
+
 ## 3. REST API
 
 Snowplow Micro offers 4 endpoints to query the data recorded.
