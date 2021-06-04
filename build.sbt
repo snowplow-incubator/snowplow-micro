@@ -45,3 +45,5 @@ maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>
 dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.2.1"
 daemonUser in Docker := "snowplow"
 dockerUpdateLatest := true
+
+scriptClasspath += "/config"
