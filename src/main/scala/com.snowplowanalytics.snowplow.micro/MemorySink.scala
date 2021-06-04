@@ -31,7 +31,7 @@ import com.snowplowanalytics.snowplow.collectors.scalastream.sinks.Sink
 import com.snowplowanalytics.snowplow.enrich.common.adapters.{AdapterRegistry, RawEvent}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.{EnrichmentManager, EnrichmentRegistry}
 import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
-import com.snowplowanalytics.snowplow.enrich.common.outputs.EnrichedEvent
+import com.snowplowanalytics.snowplow.enrich.common.utils.ConversionUtils
 
 import com.snowplowanalytics.snowplow.badrows.Processor
 
@@ -121,7 +121,7 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
       .subflatMap { enriched =>
         EventConverter.fromEnriched(enriched)
           .leftMap { failure =>
-            BadRow.LoaderParsingError(processor, failure, Payload.RawPayload(enrichedToTsv(enriched)))
+            BadRow.LoaderParsingError(processor, failure, Payload.RawPayload(ConversionUtils.tabSeparatedEnrichedEvent(enriched)))
           }
           .toEither
       }
@@ -137,7 +137,5 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
 
   private[micro] def getEnrichedContexts(enriched: Event): List[String] =
     enriched.contexts.data.map(_.schema.toSchemaUri)
-
-  private[micro] def enrichedToTsv(enriched: EnrichedEvent): String = ???
 
 }
