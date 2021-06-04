@@ -42,6 +42,6 @@ enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 packageName in Docker := "snowplow/snowplow-micro"
 maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
-dockerBaseImage := "snowplow-docker-registry.bintray.io/snowplow/base-debian:0.2.1"
+dockerBaseImage := "snowplow/base-debian:0.2.3-rc1"
 daemonUser in Docker := "snowplow"
 dockerUpdateLatest := true
