@@ -59,6 +59,7 @@ These lines must be added to the resolver:
 ```
 
 It's possible to override the default `8080` by adding `-e IGLU_PORT=xxx` to `docker run` command.
+In this case the port in the resolver must also get updated to match.
 
 To check that local schemas are correctly mounted, `schemas/` should appear in the browser at `localhost:8080` address, after having configured the port in `docker run` (`-p 8080:8080` or the port specified in `IGLU_PORT`).
 
