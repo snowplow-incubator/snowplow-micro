@@ -41,6 +41,8 @@ java -jar snowplow-micro-1.1.2.jar --collector-config example/micro.conf --iglu 
 If `schemas/` folder holding the Iglu schemas is in `$(pwd)/iglu-schemas/`, this parameter must be added to `docker run`:
 `--mount type=bind,source=$(pwd)/iglu-schemas,destination=/iglu-schemas`.
 
+If schema `iglu:foo/bar/jsonschema/1-0-0` is needed inside macro, then the file `$(pwd)/iglu-schemas/schemas/foo/bar/jsonschema/1-0-0` must exist.
+
 The container embeds an HTTP server that serves `/iglu-schemas` and listens to `8080`.
 These lines must be added to the resolver:
 ```
@@ -57,6 +59,8 @@ These lines must be added to the resolver:
 ```
 
 It's possible to override the default `8080` by adding `-e IGLU_PORT=xxx` to `docker run` command.
+
+To check that local schemas are correctly mounted, `schemas/` should appear in the browser at `localhost:8080` address, after having configured the port in `docker run` (`-p 8080:8080` or the port specified in `IGLU_PORT`).
 
 ## 3. REST API
 
