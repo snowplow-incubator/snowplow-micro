@@ -2,8 +2,8 @@ name: Deploy
 
 on:
   push:
-    branches:
-      - hackathon
+    tags:
+    - 'micro-*.*.*'
 
 jobs:
   deploy:
@@ -27,10 +27,35 @@ jobs:
     - name: Run sbt
       run: sbt test
 
-    - name: Stage
-      if: success()
+    - name: Get tag and tracker version information
+      id: version
       run: |
-        sbt docker:stage
+        echo ::set-output name=TAG_VERSION::${GITHUB_REF#refs/*/}
+        echo "##[set-output name=MICRO_VERSION;]$(sbt version -Dsbt.log.noformat=true | perl -ne 'print "$1\n" if /info.*(\d+\.\d+\.\d+[^\r\n]*)/' | tail -n 1 | tr -d '\n')"
+
+    - name: Fail if version mismatch
+      if: ${{ steps.version.outputs.TAG_VERSION != format('micro-{0}', steps.version.outputs.MICRO_VERSION) }}
+      run: |
+        echo "Tag version (${{ steps.version.outputs.TAG_VERSION }}) doesn't match version in project (${{ format('micro-{0}', steps.version.outputs.MICRO_VERSION) }})"
+        exit 1
+
+    - name: Build artifacts
+      run: sbt 'set assembly / test := {}' assembly
+
+    - name: Create GitHub release and attach artifacts
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: true
+        prerelease: true
+        name: Version ${{ steps.version.outputs.MICRO_VERSION }}
+        tag_name: ${{ steps.version.outputs.TAG_VERSION }}
+        files: |
+          target/scala-2.12/assembled_jars/snowplow-micro-${{ steps.version.outputs.MICRO_VERSION }}.jar
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Stage
+      run: sbt docker:stage
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -38,11 +63,17 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
     - name: Build image
       uses: docker/build-push-action@v2
       with:
         context: target/docker/stage
         file: target/docker/stage/Dockerfile
         platforms: linux/amd64,linux/arm64/v8
-        tags: snowplow/snowplow-micro:dev
-        push: false
+        tags: snowplow/snowplow-micro:${{ steps.version.outputs.MICRO_VERSION }}
+        push: true
