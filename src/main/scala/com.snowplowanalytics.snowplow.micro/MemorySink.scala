@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit
 import org.joda.time.DateTime
 
 import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.iglu.client.resolver.registries.RegistryLookup
 
 import com.snowplowanalytics.snowplow.analytics.scalasdk.{Event, EventConverter}
 import com.snowplowanalytics.snowplow.badrows.{BadRow, Payload}
@@ -53,6 +54,8 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
     final def monotonic(unit: TimeUnit): Id[Long] =
       unit.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
   }
+
+  implicit val registryLookup: RegistryLookup[Id] = StaticRegistryLookup
 
   /** Function of the [[Sink]] called for all the events received by a collector. */
   override def storeRawEvents(events: List[Array[Byte]], key: String) = {
