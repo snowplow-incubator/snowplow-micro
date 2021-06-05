@@ -42,7 +42,8 @@ private[micro] object Routing {
     */
   def getMicroRoutes(
       collectorConf: CollectorConfig,
-      collectorSinks: CollectorSinks
+      collectorSinks: CollectorSinks,
+      igluService: IgluService
   )(implicit ec: ExecutionContext): Route = {
     val c = new CollectorService(collectorConf, collectorSinks)
     val collectorRoutes = new CollectorRoute {
@@ -76,8 +77,14 @@ private[micro] object Routing {
           }
         } ~ options {
           complete(StatusCodes.OK)
+        } ~ pathPrefix("iglu") {
+          path(Segment / Segment / "jsonschema" / Segment) {
+            igluService.get(_, _, _)
+          } ~ {
+            complete(StatusCodes.NotFound, "Schema lookup should be in format iglu/{vendor}/{schemaName}/jsonschema/{model}-{revision}-{addition}")
+          }
         } ~ {
-          complete("Path for micro has to be one of: /all /good /bad /reset")
+          complete(StatusCodes.NotFound, "Path for micro has to be one of: /all /good /bad /reset /iglu")
         }
       }
     } ~ collectorRoutes

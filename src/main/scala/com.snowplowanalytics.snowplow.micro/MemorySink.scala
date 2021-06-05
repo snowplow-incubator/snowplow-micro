@@ -15,11 +15,9 @@ package com.snowplowanalytics.snowplow.micro
 import cats.implicits._
 import cats.Id
 import cats.data.Validated
-import cats.effect.Clock
 
 import io.circe.Json
 
-import java.util.concurrent.TimeUnit
 
 import org.joda.time.DateTime
 
@@ -34,6 +32,7 @@ import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
 import com.snowplowanalytics.snowplow.enrich.common.outputs.EnrichedEvent
 
 import com.snowplowanalytics.snowplow.badrows.Processor
+import IdImplicits._
 
 /** Sink of the collector that Snowplow Micro is.
   * Contains the functions that are called for each tracking event sent
@@ -46,13 +45,6 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
   val MaxBytes = Int.MaxValue
   private val enrichmentRegistry = new EnrichmentRegistry[Id]()
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
-
-  implicit val clockProvider: Clock[Id] = new Clock[Id] {
-    final def realTime(unit: TimeUnit): Id[Long] =
-      unit.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-    final def monotonic(unit: TimeUnit): Id[Long] =
-      unit.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
-  }
 
   /** Function of the [[Sink]] called for all the events received by a collector. */
   override def storeRawEvents(events: List[Array[Byte]], key: String) = {

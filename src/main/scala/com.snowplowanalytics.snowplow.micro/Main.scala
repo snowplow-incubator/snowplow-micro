@@ -55,8 +55,9 @@ object Main {
     implicit val executionContext = system.dispatcher
 
     val sinks = CollectorSinks(MemorySink(igluClient), MemorySink(igluClient))
+    val igluService = new IgluService(igluClient)
 
-    val routes = Routing.getMicroRoutes(collectorConf, sinks)
+    val routes = Routing.getMicroRoutes(collectorConf, sinks, igluService)
 
     Http()
       .bindAndHandle(routes, collectorConf.interface, collectorConf.port)
