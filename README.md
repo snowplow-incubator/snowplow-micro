@@ -20,7 +20,7 @@ This means companies can build automated test suites to ensure that specific eve
 
 #### Using Docker
 
-Snowplow Micro is hosted on Docker Hub : [snowplow/snowplow-micro](https://cloud.docker.com/u/snowplow/repository/docker/snowplow/snowplow-micro/general).
+Snowplow Micro is hosted on Docker Hub : [snowplow/snowplow-micro](https://hub.docker.com/r/snowplow/snowplow-micro).
 
 1. Update [configuration for Snowplow Micro](./example/micro.conf)
 1. Update [configuration for Iglu resolvers](./example/iglu.json)
