@@ -41,7 +41,7 @@ jobs:
         exit 1
 
     - name: Build artifacts
-      run: sbt 'set assembly / test := {}' assembly
+      run: sbt assembly
 
     - name: Create GitHub release and attach artifacts
       uses: softprops/action-gh-release@v1
