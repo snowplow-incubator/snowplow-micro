@@ -20,7 +20,7 @@ jobs:
 
     - name: Publish collector locally
       run: |
-        git clone --branch 2.3.0 --depth 1 https://github.com/snowplow/stream-collector.git
+        git clone --branch 2.3.1 --depth 1 https://github.com/snowplow/stream-collector.git
         cd stream-collector
         sbt publishLocal
 
@@ -32,7 +32,7 @@ jobs:
       run: |
         echo ::set-output name=TAG_VERSION::${GITHUB_REF#refs/*/}
         echo "##[set-output name=MICRO_VERSION;]$(sbt version -Dsbt.log.noformat=true | perl -ne 'print "$1\n" if /info.*(\d+\.\d+\.\d+[^\r\n]*)/' | tail -n 1 | tr -d '\n')"
-    
+
     - name: Fail if version mismatch
       if: ${{ steps.version.outputs.TAG_VERSION != format('micro-{0}', steps.version.outputs.MICRO_VERSION) }}
       run: |
