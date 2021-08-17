@@ -31,7 +31,7 @@ import org.apache.http.NameValuePair
   * and marshalling HTTP JSON responses, using circe library.
   * More information about marshalling can be found here
   * https://doc.akka.io/docs/akka-http/current/common/marshalling.html.
-  * 
+  *
   * This code mostly comes from https://github.com/hseeberger/akka-http-json.
   */
 private[micro] object CirceSupport {
@@ -61,7 +61,7 @@ private[micro] object CirceSupport {
         HttpEntity(
           mediaType,
           ByteString(
-            printer.prettyByteBuffer(json, mediaType.charset.nioCharset())))
+            printer.printToByteBuffer(json, mediaType.charset.nioCharset())))
       }
     }
 

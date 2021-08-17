@@ -20,7 +20,7 @@ object Dependencies {
     val snowplowCommonEnrich    = "2.0.2"
 
     // circe
-    val circe = "0.13.0"
+    val circe = "0.14.1"
 
     // specs2
     val specs2        = "4.9.4"
