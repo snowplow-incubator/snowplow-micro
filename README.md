@@ -330,7 +330,7 @@ Example of command to query the good events:
 
 An example of JSON with filters could be:
 ```json
-{ 
+{
   "schema": "iglu:com.acme/example/jsonschema/1-0-0",
   "contexts": [
     "com.snowplowanalytics.mobile/application/jsonschema/1-0-0",
@@ -342,11 +342,11 @@ An example of JSON with filters could be:
 
 List of possible fields for the filters:
 - `event_type`: type of the event (in `e` param);
-- `schema`: corresponds to the shema of an [unstructured event](https://github.com/snowplow/snowplow/wiki/snowplow-tracker-protocol#310-custom-unstructured-event-tracking) (schema of the self-describing JSON contained in `ue_pr` or `ue_px`).
+- `schema`: corresponds to the schema of an [unstructured event](https://docs.snowplowanalytics.com/docs/collecting-data/collecting-from-own-applications/snowplow-tracker-protocol/#Custom_unstructured_event_tracking) (schema of the self-describing JSON contained in `ue_pr` or `ue_px`).
 It automatically implies `event_type` = `ue`.
 - `contexts`: list of the schemas contained in the contexts of an event (parameters `co` or `cx`). An event must contain **all** the contexts of the list to be returned.
 It can also contain more contexts than the ones specified in the request.
-- `limit`: limit the number of events in the response (most recent events are returned).  
+- `limit`: limit the number of events in the response (most recent events are returned).
 
 It's not necessary to specify all the fields in a request, only the ones that need to be used for filtering.
 
@@ -427,7 +427,7 @@ An example of JSON with filters could be:
 List of possible fields for the filters:
 - `vendor`: vendor for the tracking event.
 - `version`: version of the vendor for the tracking event.
-- `limit`: limit the number of events in the response (most recent events are returned).  
+- `limit`: limit the number of events in the response (most recent events are returned).
 
 It's not necessary to specify all the fields in each request, only the ones that need to be used for filtering.
 
