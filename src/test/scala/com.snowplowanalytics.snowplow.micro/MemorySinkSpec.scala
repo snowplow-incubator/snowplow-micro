@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -45,7 +45,7 @@ class MemorySinkSpec extends Specification {
       ValidationCache.filterBad() must beLike { case List(badEvent) if badEvent.errors.exists(_.contains("Can't deserialize Thrift bytes")) => ok }
       ValidationCache.filterGood().size must_== 0
     }
-    
+
     "should add a BadEvent to the cache if RawEvent(s) can't be extracted from the CollectorPayload" >> {
       ValidationCache.reset()
       val bytes = buildThriftBytesBadCollectorPayload()
@@ -128,7 +128,7 @@ class MemorySinkSpec extends Specification {
         case GoodEvent(_, typE, _, _, _) => ko(s"extracted type $typE isn't $expected")
       }
     }
-    
+
     "should extract the schema of an unstructured event" >> {
       val raw = buildRawEvent(Some(buildUnstruct(sdjLinkClick)))
       val expected = schemaLinkClick
@@ -137,7 +137,7 @@ class MemorySinkSpec extends Specification {
         case GoodEvent(_, _, schema, _, _) => ko(s"extracted schema $schema isn't $expected")
       }
     }
-    
+
     "should extract the contexts of an event" >> {
       val raw = buildRawEvent(None, Some(buildContexts(List(sdjLinkClick, sdjMobileContext))))
       val expected = List(schemaLinkClick, schemaMobileContext)

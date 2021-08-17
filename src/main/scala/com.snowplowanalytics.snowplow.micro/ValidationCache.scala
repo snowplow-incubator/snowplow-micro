@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -15,7 +15,7 @@ package com.snowplowanalytics.snowplow.micro
 /** In-memory cache containing the results of the validation (or not) of the tracking events.
   * Good events are stored with their type, their schema and their contexts, if any,
   * so that they can be quickly filtered.
-  * Bad events are stored with the error message(s) describing what when wrong. 
+  * Bad events are stored with the error message(s) describing what when wrong.
   */
 private[micro] trait ValidationCache {
   import ValidationCache._
@@ -57,7 +57,7 @@ private[micro] trait ValidationCache {
       bad = List.empty[BadEvent]
     }
   }
-  
+
   /** Filter out the good events with the possible filters contained in the HTTP request. */
   private[micro] def filterGood(
     filtersGood: FiltersGood = FiltersGood(None, None, None, None)

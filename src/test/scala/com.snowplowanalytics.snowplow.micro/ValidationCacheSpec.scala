@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -69,7 +69,7 @@ class ValidationCacheSpec extends Specification {
       cache.getSummary().bad must_== 0
       cache.filterGood() must contain(exactly(GoodEvent1, GoodEvent2))
     }
-    
+
     "should succesfully add good events to a non empty cache" >> {
       val cache = cacheOf(List(GoodEvent1), Nil)
       cache.addToGood(List(GoodEvent2))
@@ -79,7 +79,7 @@ class ValidationCacheSpec extends Specification {
       cache.filterGood() must contain(exactly(GoodEvent1, GoodEvent2))
     }
   }
-  
+
   "addToBad" >> {
     "should succesfully add one bad event to an empty cache" >> {
       val cache = emptyCache()
@@ -98,7 +98,7 @@ class ValidationCacheSpec extends Specification {
       cache.getSummary().bad must_== 2
       cache.filterBad() must contain(exactly(BadEvent1, BadEvent2))
     }
-    
+
     "should succesfully add bad events to a non empty cache" >> {
       val cache = cacheOf(Nil, List(BadEvent1))
       cache.addToBad(List(BadEvent2))
@@ -154,7 +154,7 @@ class ValidationCacheSpec extends Specification {
       val filter2b = EmptyFilterGood.copy(contexts = Some(GoodEvent2.contexts.tail))
       val filter2c = EmptyFilterGood.copy(contexts = Some(GoodEvent2.contexts))
 
-      
+
       val filterAllContexts = EmptyFilterGood.copy(contexts = Some(GoodEvent1.contexts ::: GoodEvent2.contexts))
       val filterNonsense = EmptyFilterGood.copy(contexts = Some(List("nonsense")))
 
@@ -189,7 +189,7 @@ class ValidationCacheSpec extends Specification {
       ValidationCache.keepGoodEvent(GoodEvent1, shouldKeep) should beTrue
       ValidationCache.keepGoodEvent(GoodEvent1, shouldNotKeep) should beFalse
     }
-    
+
     "should correctly return true or false if the filter contains only a schema and it matches" >> {
       val shouldKeep = EmptyFilterGood.copy(schema = GoodEvent1.schema)
       val shouldNotKeep = EmptyFilterGood.copy(schema = GoodEvent2.schema)
@@ -197,7 +197,7 @@ class ValidationCacheSpec extends Specification {
       ValidationCache.keepGoodEvent(GoodEvent1, shouldKeep) should beTrue
       ValidationCache.keepGoodEvent(GoodEvent1, shouldNotKeep) should beFalse
     }
-    
+
     "should correctly return true or false if the filter contains only contexts and it matches" >> {
       val shouldKeep = EmptyFilterGood.copy(contexts = Some(GoodEvent1.contexts))
       val shouldNotKeep = EmptyFilterGood.copy(contexts = Some(GoodEvent2.contexts))
@@ -223,16 +223,16 @@ class ValidationCacheSpec extends Specification {
     "should return true if the event contains exactly the same contexts" >> {
       ValidationCache.containsAllContexts(GoodEvent1, GoodEvent1.contexts) should beTrue
     }
-    
+
     "should return true if the event contains the same contexts and more" >> {
       ValidationCache.containsAllContexts(GoodEvent1, GoodEvent1.contexts.tail) should beTrue
     }
-    
+
     "should return true if list of contexts in the filter is empty" >> {
       ValidationCache.containsAllContexts(GoodEvent1, Nil) should beTrue
     }
   }
-  
+
   "filterBad" >> {
     "should return only the bad events that match the filtered vendor" >> {
       val cache = cacheOf(Nil, List(BadEvent1, BadEvent2))
@@ -267,7 +267,7 @@ class ValidationCacheSpec extends Specification {
       cache.filterBad(filter) must contain(exactly(BadEvent2))
     }
   }
-  
+
   "keepBadEvent" >> {
     "should correctly filter out based on the vendor" >> {
       val shouldKeep = EmptyFilterBad.copy(vendor = Some(CollectorPayload1.api.vendor))
@@ -276,7 +276,7 @@ class ValidationCacheSpec extends Specification {
       ValidationCache.keepBadEvent(BadEvent1, shouldKeep) should beTrue
       ValidationCache.keepBadEvent(BadEvent1, shouldNotKeep) should beFalse
     }
-    
+
     "should correctly filter out based on the version" >> {
       val shouldKeep = EmptyFilterBad.copy(version = Some(CollectorPayload1.api.version))
       val shouldNotKeep = EmptyFilterBad.copy(version = Some(CollectorPayload2.api.version))
@@ -284,7 +284,7 @@ class ValidationCacheSpec extends Specification {
       ValidationCache.keepBadEvent(BadEvent1, shouldKeep) should beTrue
       ValidationCache.keepBadEvent(BadEvent1, shouldNotKeep) should beFalse
     }
-    
+
     "should correctly filter out based on the vendor and the version at the same time" >> {
       val shouldKeep = FiltersBad(Some(CollectorPayload1.api.vendor), Some(CollectorPayload1.api.version), None)
       val shouldNotKeep1 = FiltersBad(Some("nonsense"), Some(CollectorPayload1.api.version), None)
@@ -311,7 +311,7 @@ object ValidationCacheSpec {
   def emptyCache(): ValidationCache =
     cacheOf(Nil, Nil)
 
-  val GoodEvent1: GoodEvent = 
+  val GoodEvent1: GoodEvent =
     GoodEvent(
       events.buildRawEvent(),
       Some("type1"),
@@ -320,7 +320,7 @@ object ValidationCacheSpec {
       Event.minimal(UUID.randomUUID, Instant.now, "collector1", "etl1")
     )
 
-  val GoodEvent2: GoodEvent = 
+  val GoodEvent2: GoodEvent =
     GoodEvent(
       events.buildRawEvent(),
       Some("type2"),

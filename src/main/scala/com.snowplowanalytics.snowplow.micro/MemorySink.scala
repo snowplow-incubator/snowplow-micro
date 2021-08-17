@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -74,7 +74,7 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
                       case Right(goodEvent) =>
                         (goodEvent :: good, bad)
                       case Left(errors) =>
-                        val badEvent = 
+                        val badEvent =
                         BadEvent(
                           Some(collectorPayload),
                           Some(rawEvent),
@@ -122,7 +122,7 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
       enriched => GoodEvent(rawEvent, enriched.event, getEnrichedSchema(enriched), getEnrichedContexts(enriched), enriched)
     )
 
-  private[micro] def getEnrichedSchema(enriched: Event): Option[String] = 
+  private[micro] def getEnrichedSchema(enriched: Event): Option[String] =
     List(enriched.event_vendor, enriched.event_name, enriched.event_format, enriched.event_version)
       .sequence
       .map(_.mkString("iglu:", "/", ""))

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -27,7 +27,7 @@ object events {
   val schemaLinkClick = "iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1"
   val schemaMobileContext = "iglu:com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-1"
   val schemaDoesNotExist = "iglu:com.doesnotexist/does_not_exist/jsonschema/1-0-1"
-  
+
   val sdjLinkClick = s"""
   {
     "schema": "$schemaLinkClick",
@@ -68,7 +68,7 @@ object events {
      }
   }
   """
-  
+
   def buildRawEvent(unstruct: Option[String] = None, contexts: Option[String] = None): RawEvent = {
     val collectorApi = Api("com.snowplowanalytics.snowplow", "tp2")
     var params = Map(
@@ -140,7 +140,7 @@ object events {
     val serializer = ThriftSerializer.get()
     serializer.serialize(tCP)
   }
-  
+
   def buildThriftBytes1Good1Bad(): Array[Byte] = {
     val tCP = new tCollectorPayload(
       "iglu:com.snowplowanalytics.snowplow/CollectorPayload/thrift/1-0-0",

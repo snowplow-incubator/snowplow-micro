@@ -3,7 +3,7 @@
   *
   * Unauthorized copying of this file via any medium is strictly prohibited.
   *
-  * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
+  * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
   */
 lazy val root = project
   .in(file("."))

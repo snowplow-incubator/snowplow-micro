@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -32,7 +32,7 @@ import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorCon
   * which acts as a `Collector` and has an in-memory sink
   * holding the valid and invalid events.
   * It offers an HTTP endpoint to query this sink.
-  */ 
+  */
 object Main {
   lazy val logger = LoggerFactory.getLogger(getClass())
 
