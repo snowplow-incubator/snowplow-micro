@@ -23,7 +23,7 @@ object Dependencies {
     val circe = "0.14.1"
 
     // specs2
-    val specs2        = "4.9.4"
+    val specs2        = "4.12.2"
   }
 
   // Snowplow stream collector
