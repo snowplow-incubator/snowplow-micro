@@ -40,10 +40,10 @@ lazy val root = project
 import com.typesafe.sbt.packager.docker._
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
-packageName in Docker := "snowplow/snowplow-micro"
-maintainer in Docker := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
+Docker / packageName := "snowplow/snowplow-micro"
+Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
 dockerBaseImage := "adoptopenjdk:11-jre-hotspot-focal"
-daemonUser in Docker := "daemon"
+Docker / daemonUser := "daemon"
 dockerUpdateLatest := true
 
 scriptClasspath += "/config"
