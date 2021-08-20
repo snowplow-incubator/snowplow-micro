@@ -23,7 +23,6 @@ object Settings {
     "-deprecation",
     "-encoding", "UTF-8",
     "-feature",
-    "-target:jvm-1.8",
     "-unchecked",
     "-Ywarn-dead-code",
     "-Ywarn-inaccessible",
