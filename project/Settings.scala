@@ -36,8 +36,8 @@ object Settings {
   )
 
   lazy val javaCompilerOptions = Seq(
-    "-source", "1.8",
-    "-target", "1.8",
+    "-source", "11",
+    "-target", "11",
     "-Xlint"
   )
 
