@@ -10,7 +10,6 @@ lazy val root = project
   .settings(
     name := "snowplow-micro",
     organization := "com.snowplowanalytics.snowplow",
-    version := "1.1.2",
     description := "Standalone application to automate testing of trackers",
     scalaVersion := "2.12.14",
     scalacOptions := Settings.compilerOptions,
@@ -36,6 +35,7 @@ lazy val root = project
       scalaVersion),
     buildInfoPackage := "buildinfo"
   )
+  .settings(Settings.dynverOptions)
 
 import com.typesafe.sbt.packager.docker._
 enablePlugins(JavaAppPackaging)

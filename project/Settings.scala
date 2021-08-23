@@ -17,6 +17,9 @@ import Keys._
 import sbtassembly._
 import sbtassembly.AssemblyKeys._
 
+// SBT DynVer
+import sbtdynver.DynVerPlugin.autoImport._
+
 object Settings {
 
   lazy val compilerOptions = Seq(
@@ -49,5 +52,10 @@ object Settings {
       case "reference.conf" => MergeStrategy.concat
       case x => MergeStrategy.first
     }
+  )
+
+  lazy val dynverOptions = Seq(
+    ThisBuild / dynverSeparator := "-",    // to be compatible with docker
+    ThisBuild / dynverTagPrefix := "micro-",
   )
 }
