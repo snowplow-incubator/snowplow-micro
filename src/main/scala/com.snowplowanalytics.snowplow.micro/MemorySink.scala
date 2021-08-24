@@ -86,7 +86,7 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
                 ValidationCache.addToGood(goodEvents)
                 ValidationCache.addToBad(badEvents)
               case Validated.Invalid(badRow) =>
-                val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.toString()))
+                val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.compact))
                 ValidationCache.addToBad(List(bad))
             }
           case None =>
