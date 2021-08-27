@@ -27,7 +27,7 @@ The configuration files must be placed in a folder that is mounted in the Docker
 docker run \
   --mount type=bind,source=$(pwd)/example,destination=/config \
   -p 9090:9090 \
-  snowplow/snowplow-micro:1.2.0 \
+  snowplow/snowplow-micro:1.2.1 \
   --collector-config /config/micro.conf \
   --iglu /config/iglu.json
 ```
@@ -51,16 +51,16 @@ example
 If you cannot use Docker, a Snowplow Micro jar file is hosted on the [Github releases][gh-releases]. As an example, run Micro as:
 
 ```bash
-java -jar snowplow-micro-1.2.0.jar --collector-config example/micro.conf --iglu example/iglu.json
+java -jar snowplow-micro-1.2.1.jar --collector-config example/micro.conf --iglu example/iglu.json
 ```
 
 In case you also want an embedded Iglu, apply the same directory structure as shown above and run for example:
 
 ```bash
 # Unix
-java -cp snowplow-micro-1.2.0.jar:example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
+java -cp snowplow-micro-1.2.1.jar:example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
 # Windows
-java -cp snowplow-micro-1.2.0.jar;example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
+java -cp snowplow-micro-1.2.1.jar;example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
 ```
 
 ### Send events and start testing
