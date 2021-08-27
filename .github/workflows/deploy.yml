@@ -58,6 +58,17 @@ jobs:
     - name: Stage
       run: sbt docker:stage
 
+    - name: Docker metadata
+      id: meta
+      uses: docker/metadata-action@v3
+      with:
+        images: snowplow/snowplow-micro
+        tags: |
+          type=raw,value=latest,enable=${{ !contains(steps.version.outputs.MICRO_VERSION, 'rc') }}
+          type=raw,value=${{ steps.version.outputs.MICRO_VERSION }}
+        flavor: |
+          latest=false
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
 
@@ -76,5 +87,5 @@ jobs:
         context: target/docker/stage
         file: target/docker/stage/Dockerfile
         platforms: linux/amd64,linux/arm64/v8
-        tags: snowplow/snowplow-micro:${{ steps.version.outputs.MICRO_VERSION }}
+        tags: ${{ steps.meta.outputs.tags }}
         push: true

@@ -49,6 +49,5 @@ Docker / packageName := "snowplow/snowplow-micro"
 Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
 dockerBaseImage := "adoptopenjdk:11-jre-hotspot-focal"
 Docker / daemonUser := "daemon"
-dockerUpdateLatest := true
 
 scriptClasspath += "/config"
