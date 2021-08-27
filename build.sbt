@@ -23,9 +23,14 @@ lazy val root = project
       Dependencies.snowplowCommonEnrich,
       Dependencies.circeJawn,
       Dependencies.circeGeneric,
-      Dependencies.specs2
+      Dependencies.specs2,
+      Dependencies.thrift,
+      Dependencies.sprayJson,
+      Dependencies.jackson,
+      Dependencies.badRows
     )
   )
+  .settings(excludeDependencies ++= Dependencies.exclusions)
   .enablePlugins(BuildInfoPlugin)
   .settings(
     buildInfoKeys := Seq[BuildInfoKey](

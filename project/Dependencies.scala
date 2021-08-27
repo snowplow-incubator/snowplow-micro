@@ -24,7 +24,17 @@ object Dependencies {
 
     // specs2
     val specs2        = "4.12.2"
+
+    // force versions of transitive dependencies
+    val thrift    = "0.14.1"
+    val sprayJson = "1.3.6"
+    val jackson   = "2.10.5.1"
+    val badRows   = "2.1.1"
   }
+
+  val exclusions = Seq(
+    "org.apache.tomcat.embed" % "tomcat-embed-core"
+  )
 
   // Snowplow stream collector
   val snowplowStreamCollector = "com.snowplowanalytics" %% "snowplow-stream-collector-core" % V.snowplowStreamCollector
@@ -36,4 +46,10 @@ object Dependencies {
 
   // specs2
   val specs2       = "org.specs2"    %% "specs2-core"   % V.specs2       % Test
+
+  // transitive
+  val thrift           = "org.apache.thrift"                % "libthrift"               % V.thrift
+  val sprayJson        = "io.spray"                        %% "spray-json"              % V.sprayJson
+  val jackson          = "com.fasterxml.jackson.core"       % "jackson-databind"        % V.jackson
+  val badRows          = "com.snowplowanalytics"           %% "snowplow-badrows"        % V.badRows
 }
