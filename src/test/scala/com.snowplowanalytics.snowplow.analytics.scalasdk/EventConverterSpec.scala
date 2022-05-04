@@ -92,15 +92,6 @@ class EventConverterSpec extends Specification {
       }
     }
 
-    "should correctly convert string to optional int fields" >> {
-      val enriched = newValidEvent
-      enriched.txn_id = "42"
-      val result = EventConverter.fromEnriched(enriched)
-      result.toEither must beRight { e: Event =>
-        e.txn_id must beSome(42)
-      }
-    }
-
     "should correctly convert missing string to optional int fields" >> {
       val enriched = newValidEvent
       enriched.txn_id = null
