@@ -5,49 +5,87 @@
   *
   * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
   */
-lazy val root = project
-  .in(file("."))
-  .settings(
-    name := "snowplow-micro",
-    organization := "com.snowplowanalytics.snowplow",
-    description := "Standalone application to automate testing of trackers",
-    scalaVersion := "2.12.14",
-    scalacOptions := Settings.compilerOptions,
-    javacOptions := Settings.javaCompilerOptions,
-    resolvers ++= Dependencies.resolvers
-  )
-  .settings(Settings.assemblyOptions)
-  .settings(
-    libraryDependencies ++= Seq(
-      Dependencies.snowplowStreamCollector,
-      Dependencies.snowplowCommonEnrich,
-      Dependencies.circeJawn,
-      Dependencies.circeGeneric,
-      Dependencies.specs2,
-      Dependencies.thrift,
-      Dependencies.sprayJson,
-      Dependencies.jackson,
-      Dependencies.badRows
-    )
-  )
-  .settings(excludeDependencies ++= Dependencies.exclusions)
-  .enablePlugins(BuildInfoPlugin)
-  .settings(
-    buildInfoKeys := Seq[BuildInfoKey](
-      organization,
-      name,
-      version,
-      scalaVersion),
-    buildInfoPackage := "buildinfo"
-  )
-  .settings(Settings.dynverOptions)
-
 import com.typesafe.sbt.packager.docker._
-enablePlugins(JavaAppPackaging)
-enablePlugins(DockerPlugin)
-Docker / packageName := "snowplow/snowplow-micro"
-Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>"
-dockerBaseImage := "adoptopenjdk:11-jre-hotspot-focal"
-Docker / daemonUser := "daemon"
 
-scriptClasspath += "/config"
+lazy val buildSettings = Seq(    
+  name := "snowplow-micro",
+  organization := "com.snowplowanalytics.snowplow",
+  description := "Standalone application to automate testing of trackers",
+  scalaVersion := "2.12.14",
+  scalacOptions := Settings.compilerOptions,
+  javacOptions := Settings.javaCompilerOptions,
+  resolvers ++= Dependencies.resolvers
+)
+
+lazy val dependencies = Seq(
+  libraryDependencies ++= Seq(
+    Dependencies.snowplowStreamCollector,
+    Dependencies.snowplowCommonEnrich,
+    Dependencies.circeJawn,
+    Dependencies.circeGeneric,
+    Dependencies.specs2,
+    Dependencies.thrift,
+    Dependencies.sprayJson,
+    Dependencies.jackson,
+    Dependencies.badRows
+  )
+)
+
+lazy val exclusions = Seq(
+  excludeDependencies ++= Dependencies.exclusions
+)
+
+lazy val buildInfoSettings = Seq(
+  buildInfoKeys := Seq[BuildInfoKey](organization, name, version, scalaVersion),
+  buildInfoPackage := "buildinfo"
+)
+
+lazy val dynVerSettings = Seq(
+  ThisBuild / dynverVTagPrefix := false, // Otherwise git tags required to have v-prefix
+  ThisBuild / dynverSeparator := "-"     // to be compatible with docker
+)
+
+lazy val commonSettings = 
+  dependencies ++
+  exclusions ++
+  buildSettings ++
+  buildInfoSettings ++
+  dynVerSettings ++
+  Settings.dynverOptions ++
+  Settings.assemblyOptions
+
+lazy val dockerCommon = Seq(
+  Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>",
+  Docker / packageName := "snowplow/snowplow-micro",
+  Docker / defaultLinuxInstallLocation := "/opt/snowplow",
+  Docker / daemonUserUid := None,
+  dockerRepository := Some("snowplow"),
+  scriptClasspath += "/config",
+)
+
+lazy val microSettingsDistroless = dockerCommon ++ Seq(
+  dockerBaseImage := "gcr.io/distroless/java11-debian11:nonroot",
+  Docker / daemonUser := "nonroot",
+  Docker / daemonGroup := "nonroot",
+  dockerEntrypoint := Seq(
+    "java",
+    "-jar",
+    s"/opt/snowplow/lib/${(packageJavaLauncherJar / artifactPath).value.getName}"
+  ),
+  dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
+)
+
+lazy val microSettings = dockerCommon ++ Seq(
+  dockerBaseImage := "eclipse-temurin:11",
+  Docker / daemonUser := "daemon",
+)
+
+lazy val micro = project
+  .in(file("."))
+  .settings(commonSettings ++ microSettings)
+  .enablePlugins(BuildInfoPlugin, DockerPlugin, JavaAppPackaging, LauncherJarPlugin)
+  
+lazy val microDistroless = project
+  .in(file("distroless/micro"))
+  .settings(commonSettings ++ microSettingsDistroless)
+  .enablePlugins(BuildInfoPlugin, DockerPlugin, JavaAppPackaging, LauncherJarPlugin)
