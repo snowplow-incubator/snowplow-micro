@@ -29,6 +29,10 @@ import scala.io.Source
 import java.io.File
 
 import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.iglu.client.resolver.registries.Registry
+import com.snowplowanalytics.iglu.client.resolver.Resolver
+import com.snowplowanalytics.iglu.client.CirceValidator
+
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, SinkConfig}
 
 /** Contain functions to parse the command line arguments,
@@ -41,51 +45,69 @@ private[micro] object ConfigHelper {
     ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 
   implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
+  private val defaultIgluClient = Client[Id, Json](Resolver(List(Registry.IgluCentral), None), CirceValidator)
 
   /** Parse the command line arguments and the configuration files. */
   def parseConfig(args: Array[String]): (CollectorConfig, Client[Id, Json], Config) = {
     case class MicroConfig(
-      collectorConfigFile: File = new File("."),
-      igluConfigFile: File = new File(".")
+      collectorConfigFile: Option[File] = None,
+      igluConfigFile: Option[File] = None
     )
 
     val parser = new scopt.OptionParser[MicroConfig](buildinfo.BuildInfo.name) {
       head(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
       help("help")
       version("version")
-      opt[File]("collector-config")
-        .required()
+      opt[Option[File]]("collector-config")
+        .optional()
         .valueName("<filename>")
         .text("Configuration file for collector")
-        .action((f: File, c: MicroConfig) => c.copy(collectorConfigFile = f))
+        .action((f: Option[File], c: MicroConfig) => c.copy(collectorConfigFile = f))
         .validate(f =>
-          if (f.exists) success
-          else failure(s"Configuration file $f does not exist"))
-      opt[File]("iglu")
-        .required()
+          f match {
+            case Some(file) =>
+              if (file.exists) success
+              else failure(s"Configuration file $f does not exist")
+            case None => success
+          }
+        )
+      opt[Option[File]]("iglu")
+        .optional()
         .valueName("<filename>")
         .text("Configuration file for Iglu igluClient")
-        .action((f: File, c: MicroConfig) => c.copy(igluConfigFile = f))
+        .action((f: Option[File], c: MicroConfig) => c.copy(igluConfigFile = f))
         .validate(f =>
-          if (f.exists) success
-          else failure(s"Configuration file $f does not exist"))
+          f match {
+            case Some(file) =>
+              if (file.exists) success
+              else failure(s"Configuration file $f does not exist")
+            case None => success
+          }
+        )
     }
-
+    
     val (collectorFile, igluFile) = parser.parse(args, MicroConfig()) match {
-      case Some(microConfig) =>
+      case Some(microConfig: MicroConfig) =>
         (microConfig.collectorConfigFile, microConfig.igluConfigFile)
       case None =>
         throw new RuntimeException("Problem while parsing arguments") // should never be called
     }
 
-    val collectorConfig = ConfigFactory.parseFile(collectorFile).resolve()
-    if (!collectorConfig.hasPath("collector"))
-      throw new IllegalArgumentException("Config file for collector doesn't contain \"collector\" path")
+    val resolved = collectorFile match {
+      case Some(f) => ConfigFactory.parseFile(f).resolve()
+      case None    => ConfigFactory.empty()
+    }
 
-    val igluClient = getIgluClientFromFile(igluFile) match {
-      case Right(igluClient) => igluClient
-      case Left(e) =>
-        throw new IllegalArgumentException(s"Error while reading Iglu config file: $e.")
+    val collectorConfig = ConfigFactory.load(resolved.withFallback(ConfigFactory.load()))
+
+    val igluClient = igluFile match {
+      case Some(f) =>
+        getIgluClientFromFile(f) match {
+          case Right(igluClient) => igluClient
+          case Left(e) =>
+            throw new IllegalArgumentException(s"Error while reading Iglu config file: $e.")
+        }
+      case None => defaultIgluClient
     }
 
     (

@@ -109,7 +109,7 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
     enrichmentRegistry: EnrichmentRegistry[Id],
     processor: Processor
   ): Either[List[String], GoodEvent] =
-    EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent)
+    EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent, false, ())
       .subflatMap { enriched =>
         EventConverter.fromEnriched(enriched)
           .leftMap { failure =>
@@ -130,4 +130,5 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
   private[micro] def getEnrichedContexts(enriched: Event): List[String] =
     enriched.contexts.data.map(_.schema.toSchemaUri)
 
+  override def shutdown(): Unit = ()
 }

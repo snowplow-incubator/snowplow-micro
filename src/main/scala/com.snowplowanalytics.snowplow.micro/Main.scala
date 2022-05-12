@@ -13,7 +13,6 @@
 package com.snowplowanalytics.snowplow.micro
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.http.scaladsl.Http
 
 import cats.Id
@@ -51,7 +50,6 @@ object Main {
     akkaConf: Config
   ): Unit = {
     implicit val system = ActorSystem.create("snowplow-micro", akkaConf)
-    implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatcher
 
     val sinks = CollectorSinks(MemorySink(igluClient), MemorySink(igluClient))
@@ -60,7 +58,8 @@ object Main {
     val routes = Routing.getMicroRoutes(collectorConf, sinks, igluService)
 
     Http()
-      .bindAndHandle(routes, collectorConf.interface, collectorConf.port)
+      .newServerAt(collectorConf.interface, collectorConf.port)
+      .bind(routes)
       .foreach { binding =>
         logger.info(s"REST interface bound to ${binding.localAddress}")
       }
