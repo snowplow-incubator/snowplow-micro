@@ -20,7 +20,7 @@ import akka.http.scaladsl.model.{HttpMethods, StatusCodes}
 import io.circe.generic.auto._
 
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, CollectorSinks}
-import com.snowplowanalytics.snowplow.collectors.scalastream.{CollectorRoute, CollectorService}
+import com.snowplowanalytics.snowplow.collectors.scalastream.{CollectorRoute, CollectorService, HealthService}
 
 import scala.concurrent.ExecutionContext
 
@@ -45,9 +45,12 @@ private[micro] object Routing {
       collectorSinks: CollectorSinks,
       igluService: IgluService
   )(implicit ec: ExecutionContext): Route = {
-    val c = new CollectorService(collectorConf, collectorSinks)
+    val c = new CollectorService(collectorConf, collectorSinks, buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
+
+    val health = new HealthService.Settable
     val collectorRoutes = new CollectorRoute {
       override def collectorService = c
+      override def healthService    = health
     }.collectorRoute
 
     withCors(c) {
