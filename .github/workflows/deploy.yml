@@ -41,7 +41,7 @@ jobs:
         exit 1
 
     - name: Build artifacts
-      run: sbt assembly
+      run: sbt 'project micro' assembly
 
     - name: Create GitHub release and attach artifacts
       uses: softprops/action-gh-release@v1
@@ -55,8 +55,11 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Stage
-      run: sbt docker:stage
+    - name: Stage the Docker build
+      run: sbt "project micro" docker:stage
+
+    - name: Stage the Docker distroless build
+      run: sbt "project microDistroless" docker:stage
 
     - name: Docker metadata
       id: meta
@@ -66,6 +69,17 @@ jobs:
         tags: |
           type=raw,value=latest,enable=${{ !contains(steps.version.outputs.MICRO_VERSION, 'rc') }}
           type=raw,value=${{ steps.version.outputs.MICRO_VERSION }}
+        flavor: |
+          latest=false
+
+    - name: Docker metadata distroless
+      id: distroless-meta
+      uses: docker/metadata-action@v3
+      with:
+        images: snowplow/snowplow-micro
+        tags: |
+          type=raw,value=latest-distroless,enable=${{ !contains(steps.ver.outputs.MICRO_VERSION, 'rc') }}
+          type=raw,value=${{ steps.version.outputs.MICRO_VERSION }}-distroless
         flavor: |
           latest=false
 
@@ -88,4 +102,13 @@ jobs:
         file: target/docker/stage/Dockerfile
         platforms: linux/amd64,linux/arm64/v8
         tags: ${{ steps.meta.outputs.tags }}
+        push: true
+
+    - name: Build distroless image
+      uses: docker/build-push-action@v2
+      with:
+        context: distroless/micro/target/docker/stage
+        file: distroless/micro/target/docker/stage/Dockerfile
+        platforms: linux/amd64,linux/arm64/v8
+        tags: ${{ steps.distroless-meta.outputs.tags }}
         push: true
