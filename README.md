@@ -11,15 +11,31 @@ It is a very small version of a full Snowplow data collection pipeline: small en
 
 ## Quick start
 
-Snowplow Micro is configured at runtime through the [Stream Collector][stream-collector] configuration and the [Iglu][iglu] resolver configuration. So, to start Snowplow Micro:
-
-1. Update the [stream collector configuration][stream-collector-config] for Snowplow Micro: [example configuration][collector-config-example].
-2. Update the [Iglu resolver configuration][iglu-resolver-config] for Snowplow Micro: [example configuration][iglu-resolver-example].
-3. Run Micro either using Docker or using Java.
-
 ### Using Docker
 
 Snowplow Micro is hosted on Docker Hub ([snowplow/snowplow-micro][docker-micro]) with images available for both `amd64` and `arm64` architectures.
+
+The following command can be used to run Micro with the default configuration:
+
+```bash
+docker run -p 9090:9090 snowplow/snowplow-micro
+```
+
+A [distroless][distroless-repo] image is also provided, which benefits from being smaller and more secure, with the downside of basic utilities (such as a shell) not being present in the image.
+
+The distroless image is tagged as `snowplow/snowplow-micro:x.x.x-distroless` on Docker Hub.
+
+#### Configuring Micro
+
+##### Stream Collector config
+
+[Stream Collector][stream-collector] collects the events sent by Snowplow trackers. The options for configuring the collector are [available here][stream-collector-config]. A minimal example of this file exists at `example/micro.conf`
+
+##### Iglu resolver config
+
+The [Iglu][iglu] resolver is used to define where schemas are fetched from. The instructions for configuration are [available here][iglu-resolver-config]. An example of this file exists at `example/iglu.json`
+
+##### Running Micro with configuration files
 
 The configuration files must be placed in a folder that is mounted in the Docker container, and the port configured for Micro needs to be exposed. The following examples assume that the configuration files are in the directory `./example/` and that port `9090` is the one to bind on your host machine:
 
@@ -27,7 +43,7 @@ The configuration files must be placed in a folder that is mounted in the Docker
 docker run \
   --mount type=bind,source=$(pwd)/example,destination=/config \
   -p 9090:9090 \
-  snowplow/snowplow-micro:1.2.1 \
+  snowplow/snowplow-micro:1.3.0 \
   --collector-config /config/micro.conf \
   --iglu /config/iglu.json
 ```
@@ -51,16 +67,16 @@ example
 If you cannot use Docker, a Snowplow Micro jar file is hosted on the [Github releases][gh-releases]. As an example, run Micro as:
 
 ```bash
-java -jar snowplow-micro-1.2.1.jar --collector-config example/micro.conf --iglu example/iglu.json
+java -jar snowplow-micro-1.3.0.jar --collector-config example/micro.conf --iglu example/iglu.json
 ```
 
 In case you also want an embedded Iglu, apply the same directory structure as shown above and run for example:
 
 ```bash
 # Unix
-java -cp snowplow-micro-1.2.1.jar:example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
+java -cp snowplow-micro-1.3.0.jar:example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
 # Windows
-java -cp snowplow-micro-1.2.1.jar;example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
+java -cp snowplow-micro-1.3.0.jar;example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
 ```
 
 ### Send events and start testing
@@ -93,7 +109,7 @@ Assuming [Git][git] and [sbt][sbt]:
 git clone git@github.com:snowplow-incubator/snowplow-micro-examples.git
 cd snowplow-micro
 
-git clone --branch 2.3.1 --depth 1 git@github.com:snowplow/stream-collector.git
+git clone --branch 2.6.0 --depth 1 git@github.com:snowplow/stream-collector.git
 cd stream-collector
 sbt publishLocal && cd ..
 
@@ -116,6 +132,7 @@ limitations under the License.
 [docker-micro]: https://hub.docker.com/r/snowplow/snowplow-micro
 [docker-image]: https://img.shields.io/docker/v/snowplow/snowplow-micro?sort=semver
 [docker-pulls]: https://img.shields.io/docker/pulls/snowplow/snowplow-micro
+[distroless-repo]: https://github.com/GoogleContainerTools/distroless
 
 [gh-actions]: https://github.com/snowplow-incubator/snowplow-micro/actions
 [gh-actions-image]: https://github.com/snowplow-incubator/snowplow-micro/actions/workflows/test.yml/badge.svg?branch=master
