@@ -18,7 +18,7 @@ Snowplow Micro is hosted on Docker Hub ([snowplow/snowplow-micro][docker-micro])
 The following command can be used to run Micro with the default configuration:
 
 ```bash
-docker run -p 9090:9090 snowplow/snowplow-micro
+docker run -p 9090:9090 snowplow/snowplow-micro:1.3.0
 ```
 
 A [distroless][distroless-repo] image is also provided, which benefits from being smaller and more secure, with the downside of basic utilities (such as a shell) not being present in the image.
