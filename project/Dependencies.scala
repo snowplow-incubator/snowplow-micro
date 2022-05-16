@@ -3,7 +3,7 @@
   *
   * Unauthorized copying of this file via any medium is strictly prohibited.
   *
-  * Copyright (c) 2018-2021 Snowplow Analytics Ltd. All rights reserved.
+  * Copyright (c) 2018-2022 Snowplow Analytics Ltd. All rights reserved.
   */
 
 import sbt._
