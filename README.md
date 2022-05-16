@@ -29,11 +29,11 @@ The distroless image is tagged as `snowplow/snowplow-micro:1.3.0-distroless` on 
 
 ##### Stream Collector config
 
-[Stream Collector][stream-collector] collects the events sent by Snowplow trackers. The options for configuring the collector are [available here][stream-collector-config]. A minimal example of this file exists at `example/micro.conf`
+[Stream Collector][stream-collector] collects the events sent by Snowplow trackers. The options for configuring the collector are [available here][stream-collector-config]. A minimal example of this file exists at [`example/micro.conf`](./example/micro.conf)
 
 ##### Iglu resolver config
 
-The [Iglu][iglu] resolver is used to define where schemas are fetched from. The instructions for configuration are [available here][iglu-resolver-config]. An example of this file exists at `example/iglu.json`
+The [Iglu][iglu] resolver is used to define where schemas are fetched from. The instructions for configuration are [available here][iglu-resolver-config]. An example of this file exists at [`example/iglu.json`](./example/iglu.json)
 
 ##### Running Micro with configuration files
 
