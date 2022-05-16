@@ -23,7 +23,7 @@ docker run -p 9090:9090 snowplow/snowplow-micro:1.3.0
 
 A [distroless][distroless-repo] image is also provided, which benefits from being smaller and more secure, with the downside of basic utilities (such as a shell) not being present in the image.
 
-The distroless image is tagged as `snowplow/snowplow-micro:x.x.x-distroless` on Docker Hub.
+The distroless image is tagged as `snowplow/snowplow-micro:1.3.0-distroless` on Docker Hub.
 
 #### Configuring Micro
 
