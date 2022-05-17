@@ -118,7 +118,7 @@ sbt test
 
 ## Copyright and License
 
-Snowplow Micro is copyright 2019-2021 Snowplow Analytics Ltd.
+Snowplow Micro is copyright 2019-2022 Snowplow Analytics Ltd.
 
 Licensed under the **[Apache License, Version 2.0][license]** (the "License");
 you may not use this software except in compliance with the License.
