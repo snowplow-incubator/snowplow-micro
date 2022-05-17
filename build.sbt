@@ -3,7 +3,7 @@
   *
   * Unauthorized copying of this file via any medium is strictly prohibited.
   *
-  * Copyright (c) 2019-2021 Snowplow Analytics Ltd. All rights reserved.
+  * Copyright (c) 2019-2022 Snowplow Analytics Ltd. All rights reserved.
   */
 import com.typesafe.sbt.packager.docker._
 
