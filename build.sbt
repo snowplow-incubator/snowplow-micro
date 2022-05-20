@@ -73,6 +73,7 @@ lazy val microSettingsDistroless = dockerCommon ++ Seq(
     s"/opt/snowplow/lib/${(packageJavaLauncherJar / artifactPath).value.getName}"
   ),
   dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
+  sourceDirectory := (micro / sourceDirectory).value
 )
 
 lazy val microSettings = dockerCommon ++ Seq(
