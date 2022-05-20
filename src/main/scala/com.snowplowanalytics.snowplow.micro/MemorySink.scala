@@ -49,7 +49,6 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
   /** Function of the [[Sink]] called for all the events received by a collector. */
   override def storeRawEvents(events: List[Array[Byte]], key: String) = {
     events.foreach(bytes => processThriftBytes(bytes, igluClient, enrichmentRegistry, processor))
-    Nil
   }
 
   /** Deserialize Thrift bytes into `CollectorPayload`s,
