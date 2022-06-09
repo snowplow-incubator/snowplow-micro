@@ -69,8 +69,9 @@ lazy val microSettingsDistroless = dockerCommon ++ Seq(
   Docker / daemonGroup := "nonroot",
   dockerEntrypoint := Seq(
     "java",
-    "-jar",
-    s"/opt/snowplow/lib/${(packageJavaLauncherJar / artifactPath).value.getName}"
+    "-cp",
+    s"/opt/snowplow/lib/${(packageJavaClasspathJar / artifactPath).value.getName}:/config",
+    "com.snowplowanalytics.snowplow.micro.Main"
   ),
   dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
   sourceDirectory := (micro / sourceDirectory).value
@@ -84,9 +85,9 @@ lazy val microSettings = dockerCommon ++ Seq(
 lazy val micro = project
   .in(file("."))
   .settings(commonSettings ++ microSettings)
-  .enablePlugins(BuildInfoPlugin, DockerPlugin, JavaAppPackaging, LauncherJarPlugin)
+  .enablePlugins(BuildInfoPlugin, DockerPlugin, JavaAppPackaging)
   
 lazy val microDistroless = project
   .in(file("distroless/micro"))
   .settings(commonSettings ++ microSettingsDistroless)
-  .enablePlugins(BuildInfoPlugin, DockerPlugin, JavaAppPackaging, LauncherJarPlugin)
+  .enablePlugins(BuildInfoPlugin, DockerPlugin, JavaAppPackaging, ClasspathJarPlugin)
