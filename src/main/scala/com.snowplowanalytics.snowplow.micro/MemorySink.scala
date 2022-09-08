@@ -33,6 +33,7 @@ import com.snowplowanalytics.snowplow.enrich.common.utils.ConversionUtils
 
 import com.snowplowanalytics.snowplow.badrows.Processor
 import IdImplicits._
+import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
 
 /** Sink of the collector that Snowplow Micro is.
   * Contains the functions that are called for each tracking event sent
@@ -108,7 +109,7 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
     enrichmentRegistry: EnrichmentRegistry[Id],
     processor: Processor
   ): Either[List[String], GoodEvent] =
-    EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent, false, ())
+    EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent, EtlPipeline.FeatureFlags(acceptInvalid = false, legacyEnrichmentOrder = false), ())
       .subflatMap { enriched =>
         EventConverter.fromEnriched(enriched)
           .leftMap { failure =>
