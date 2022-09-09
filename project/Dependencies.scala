@@ -29,7 +29,7 @@ object Dependencies {
     val thrift    = "0.14.1"
     val sprayJson = "1.3.6"
     val jackson   = "2.10.5.1"
-    val badRows   = "2.1.1"
+    val badRows   = "2.2.0"
   }
 
   val exclusions = Seq(
