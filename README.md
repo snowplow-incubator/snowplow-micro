@@ -109,7 +109,7 @@ Assuming [Git][git] and [sbt][sbt]:
 git clone git@github.com:snowplow-incubator/snowplow-micro-examples.git
 cd snowplow-micro
 
-git clone --branch 2.6.0 --depth 1 git@github.com:snowplow/stream-collector.git
+git clone --branch 2.7.1 --depth 1 git@github.com:snowplow/stream-collector.git
 cd stream-collector
 sbt publishLocal && cd ..
 
