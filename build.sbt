@@ -55,7 +55,7 @@ lazy val commonSettings =
   Settings.assemblyOptions
 
 lazy val dockerCommon = Seq(
-  Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplowanalytics.com>",
+  Docker / maintainer := "Snowplow Analytics Ltd. <support@snowplow.io>",
   Docker / packageName := "snowplow/snowplow-micro",
   Docker / defaultLinuxInstallLocation := "/opt/snowplow",
   Docker / daemonUserUid := None,
