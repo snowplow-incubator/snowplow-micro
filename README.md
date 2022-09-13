@@ -142,26 +142,26 @@ limitations under the License.
 [license-image]: https://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
 
 [snowplow]: https://github.com/snowplow/snowplow
-[discourse]: https://discourse.snowplowanalytics.com
+[discourse]: https://discourse.snowplow.io
 
 [example-dir]: https://github.com/snowplow-incubator/snowplow-micro/tree/master/example
 
 [iglu]: https://github.com/snowplow/iglu
-[iglu-resolver-config]: https://docs.snowplowanalytics.com/docs/pipeline-components-and-applications/iglu/iglu-resolver/
+[iglu-resolver-config]: https://docs.snowplow.io/docs/pipeline-components-and-applications/iglu/iglu-resolver/
 [iglu-resolver-example]: https://github.com/snowplow-incubator/snowplow-micro/blob/master/example/iglu.json
 
 [stream-collector]: https://github.com/snowplow/stream-collector
-[stream-collector-config]: https://docs.snowplowanalytics.com/docs/pipeline-components-and-applications/stream-collector/configure/#basic-configuration
+[stream-collector-config]: https://docs.snowplow.io/docs/pipeline-components-and-applications/stream-collector/configure/#basic-configuration
 [collector-config-example]: https://github.com/snowplow-incubator/snowplow-micro/blob/master/example/micro.conf
 
-[snowplow-trackers]: https://docs.snowplowanalytics.com/docs/collecting-data/collecting-from-own-applications/
-[micro-rest-api]: https://docs.snowplowanalytics.com/docs/managing-data-quality/testing-and-qa-workflows/set-up-automated-testing-with-snowplow-micro/#rest-api
+[snowplow-trackers]: https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/
+[micro-rest-api]: https://docs.snowplow.io/docs/managing-data-quality/testing-and-qa-workflows/set-up-automated-testing-with-snowplow-micro/#rest-api
 
-[techdocs]: https://docs.snowplowanalytics.com/docs/managing-data-quality/testing-and-qa-workflows/set-up-automated-testing-with-snowplow-micro
+[techdocs]: https://docs.snowplow.io/docs/managing-data-quality/testing-and-qa-workflows/set-up-automated-testing-with-snowplow-micro
 [techdocs-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/techdocs.png
 [roadmap]: https://github.com/snowplow/snowplow/projects/7
 [roadmap-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/roadmap.png
-[contributing]: https://docs.snowplowanalytics.com/docs/contributing
+[contributing]: https://docs.snowplow.io/docs/contributing
 [contributing-image]: https://d3i6fms1cm1j0i.cloudfront.net/github/images/contributing.png
 
 [git]: https://git-scm.com/
