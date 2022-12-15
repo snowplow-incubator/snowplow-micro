@@ -24,9 +24,6 @@ lazy val dependencies = Seq(
     Dependencies.circeJawn,
     Dependencies.circeGeneric,
     Dependencies.specs2,
-    Dependencies.thrift,
-    Dependencies.sprayJson,
-    Dependencies.jackson,
     Dependencies.badRows
   )
 )
