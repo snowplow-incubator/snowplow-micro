@@ -17,13 +17,12 @@ import akka.http.scaladsl.Http
 
 import cats.Id
 
-import io.circe.Json
-
 import org.slf4j.LoggerFactory
 
 import com.typesafe.config.Config
 
-import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.iglu.client.IgluCirceClient
+import com.snowplowanalytics.iglu.client.resolver.Resolver
 
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, CollectorSinks}
 
@@ -36,8 +35,8 @@ object Main {
   lazy val logger = LoggerFactory.getLogger(getClass())
 
   def main(args: Array[String]): Unit = {
-    val (collectorConf, igluClient, akkaConf) = ConfigHelper.parseConfig(args)
-    run(collectorConf, igluClient, akkaConf)
+    val (collectorConf, igluResolver, igluClient, akkaConf) = ConfigHelper.parseConfig(args)
+    run(collectorConf, igluResolver, igluClient, akkaConf)
   }
 
   /** Create the in-memory sink,
@@ -46,14 +45,15 @@ object Main {
     */
   def run(
     collectorConf: CollectorConfig,
-    igluClient: Client[Id, Json],
+    igluResolver: Resolver[Id],
+    igluClient: IgluCirceClient[Id],
     akkaConf: Config
   ): Unit = {
     implicit val system = ActorSystem.create("snowplow-micro", akkaConf)
     implicit val executionContext = system.dispatcher
 
     val sinks = CollectorSinks(MemorySink(igluClient), MemorySink(igluClient))
-    val igluService = new IgluService(igluClient)
+    val igluService = new IgluService(igluResolver)
 
     val routes = Routing.getMicroRoutes(collectorConf, sinks, igluService)
 

@@ -21,17 +21,14 @@ import pureconfig.generic.auto._
 import cats.Id
 import cats.implicits._
 
-import io.circe.Json
 import io.circe.parser.parse
 
 import scala.io.Source
 
 import java.io.File
 
-import com.snowplowanalytics.iglu.client.Client
-import com.snowplowanalytics.iglu.client.resolver.registries.Registry
+import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
-import com.snowplowanalytics.iglu.client.CirceValidator
 
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, SinkConfig}
 
@@ -45,10 +42,9 @@ private[micro] object ConfigHelper {
     ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 
   implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
-  private val defaultIgluClient = Client[Id, Json](Resolver(List(Registry.IgluCentral), None), CirceValidator)
 
   /** Parse the command line arguments and the configuration files. */
-  def parseConfig(args: Array[String]): (CollectorConfig, Client[Id, Json], Config) = {
+  def parseConfig(args: Array[String]): (CollectorConfig, Resolver[Id], IgluCirceClient[Id], Config) = {
     case class MicroConfig(
       collectorConfigFile: Option[File] = None,
       igluConfigFile: Option[File] = None
@@ -100,29 +96,31 @@ private[micro] object ConfigHelper {
 
     val collectorConfig = ConfigFactory.load(resolved.withFallback(ConfigFactory.load()))
 
-    val igluClient = igluFile match {
-      case Some(f) =>
-        getIgluClientFromFile(f) match {
-          case Right(igluClient) => igluClient
-          case Left(e) =>
-            throw new IllegalArgumentException(s"Error while reading Iglu config file: $e.")
-        }
-      case None => defaultIgluClient
+    val resolverSource = igluFile match {
+      case Some(f) => Source.fromFile(f)
+      case None => Source.fromResource("default-iglu-resolver.json")
+    }
+
+    val (resolver, igluClient) = getIgluClientFromSource(resolverSource) match {
+      case Right(ok) => ok
+      case Left(e) =>
+        throw new IllegalArgumentException(s"Error while reading Iglu config file: $e.")
     }
 
     (
       ConfigSource.fromConfig(collectorConfig.getConfig("collector")).loadOrThrow[CollectorConfig],
+      resolver,
       igluClient,
       collectorConfig
     )
   }
 
   /** Instantiate an Iglu client from its configuration file. */
-  def getIgluClientFromFile(igluConfigFile: File): Either[String, Client[Id, Json]] =
-    parse(Source.fromFile(igluConfigFile).mkString)
-      .leftMap(_.show)
-      .flatMap(json =>
-        Client.parseDefault[Id](json).value
-          .leftMap(_.getMessage())
-      )
+  def getIgluClientFromSource(igluConfigSource: Source): Either[String, (Resolver[Id], IgluCirceClient[Id])] =
+    for {
+      text <- Either.catchNonFatal(igluConfigSource.mkString).leftMap(_.getMessage)
+      json <- parse(text).leftMap(_.show)
+      config <- Resolver.parseConfig(json).leftMap(_.show)
+      resolver <- Resolver.fromConfig[Id](config).leftMap(_.show).value
+    } yield (resolver, IgluCirceClient.fromResolver[Id](resolver, config.cacheSize))
 }

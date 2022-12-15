@@ -17,22 +17,21 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.model.StatusCodes.NotFound
 import cats.Id
-import io.circe.Json
 import io.circe.generic.auto._
 
-import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.core.{SchemaVer, SchemaKey}
 
 import IdImplicits._
 import CirceSupport._
 
-class IgluService(client: Client[Id, Json]) {
+class IgluService(resolver: Resolver[Id]) {
 
   def get(vendor: String, name: String, versionStr: String): Route =
     SchemaVer.parseFull(versionStr) match {
       case Right(version) =>
         val key = SchemaKey(vendor, name, "jsonschema", version)
-        client.resolver.lookupSchema(key) match {
+        resolver.lookupSchema(key) match {
           case Right(json) => complete(json)
           case Left(error) => complete(NotFound, error)
         }

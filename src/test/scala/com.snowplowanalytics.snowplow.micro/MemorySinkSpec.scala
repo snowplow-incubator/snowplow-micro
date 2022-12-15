@@ -16,12 +16,9 @@ import org.specs2.mutable.Specification
 
 import cats.Id
 
-import io.circe.Json
-
-import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.client.resolver.registries.Registry
-import com.snowplowanalytics.iglu.client.CirceValidator
 
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 
@@ -30,7 +27,7 @@ import com.snowplowanalytics.snowplow.badrows.Processor
 class MemorySinkSpec extends Specification {
   import events._
 
-  private val igluClient = Client[Id, Json](Resolver(List(Registry.IgluCentral), None), CirceValidator)
+  private val igluClient = IgluCirceClient.fromResolver[Id](Resolver(List(Registry.IgluCentral), None), 500)
   private val enrichmentRegistry = new EnrichmentRegistry[Id]()
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
   private val sink = MemorySink(igluClient)

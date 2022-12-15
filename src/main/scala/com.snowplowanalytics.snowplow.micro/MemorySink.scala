@@ -16,12 +16,9 @@ import cats.implicits._
 import cats.Id
 import cats.data.Validated
 
-import io.circe.Json
-
-
 import org.joda.time.DateTime
 
-import com.snowplowanalytics.iglu.client.Client
+import com.snowplowanalytics.iglu.client.IgluCirceClient
 
 import com.snowplowanalytics.snowplow.analytics.scalasdk.{Event, EventConverter}
 import com.snowplowanalytics.snowplow.badrows.{BadRow, Payload}
@@ -42,7 +39,7 @@ import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
   * For each event it tries to validate it using Common Enrich,
   * and then stores the results in-memory in [[ValidationCache]].
   */
-private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends Sink {
+private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id]) extends Sink {
   val MaxBytes = Int.MaxValue
   private val enrichmentRegistry = new EnrichmentRegistry[Id]()
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
@@ -58,7 +55,7 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
     */
   private[micro] def processThriftBytes(
     thriftBytes: Array[Byte],
-    igluClient: Client[Id, Json],
+    igluClient: IgluCirceClient[Id],
     enrichmentRegistry: EnrichmentRegistry[Id],
     processor: Processor
   ): Unit =
@@ -105,7 +102,7 @@ private[micro] final case class MemorySink(igluClient: Client[Id, Json]) extends
     */
   private[micro] def validateEvent(
     rawEvent: RawEvent,
-    igluClient: Client[Id, Json],
+    igluClient: IgluCirceClient[Id],
     enrichmentRegistry: EnrichmentRegistry[Id],
     processor: Processor
   ): Either[List[String], GoodEvent] =
