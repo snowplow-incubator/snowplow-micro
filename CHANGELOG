@@ -1,3 +1,8 @@
+Version 1.4.0 (2023-01-31)
+--------------------------
+Add the --output-tsv (-t) option that outputs [enriched TSV](https://docs.snowplow.io/docs/understanding-your-pipeline/canonical-event/understanding-the-enriched-tsv-format/) (#129)
+Add logging for incoming events (#130)
+
 Version 1.3.5 (2022-12-16)
 --------------------------
 Remove overrides of transitive dependency versions (#125)
