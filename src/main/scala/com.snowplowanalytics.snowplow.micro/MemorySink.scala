@@ -39,7 +39,7 @@ import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
   * For each event it tries to validate it using Common Enrich,
   * and then stores the results in-memory in [[ValidationCache]].
   */
-private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id]) extends Sink {
+private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], outputEnrichedTsv: Boolean) extends Sink {
   val MaxBytes = Int.MaxValue
   private val enrichmentRegistry = new EnrichmentRegistry[Id]()
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
@@ -82,6 +82,11 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id]) exte
                 }
                 ValidationCache.addToGood(goodEvents)
                 ValidationCache.addToBad(badEvents)
+                if (outputEnrichedTsv) {
+                  goodEvents.foreach { event =>
+                    println(event.event.toTsv)
+                  }
+                }
               case Validated.Invalid(badRow) =>
                 val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.compact))
                 ValidationCache.addToBad(List(bad))

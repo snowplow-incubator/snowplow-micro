@@ -30,7 +30,7 @@ class MemorySinkSpec extends Specification {
   private val igluClient = IgluCirceClient.fromResolver[Id](Resolver(List(Registry.IgluCentral), None), 500)
   private val enrichmentRegistry = new EnrichmentRegistry[Id]()
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
-  private val sink = MemorySink(igluClient)
+  private val sink = MemorySink(igluClient, outputEnrichedTsv = false)
 
   sequential
 
