@@ -44,10 +44,11 @@ private[micro] object ConfigHelper {
   implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
 
   /** Parse the command line arguments and the configuration files. */
-  def parseConfig(args: Array[String]): (CollectorConfig, Resolver[Id], IgluCirceClient[Id], Config) = {
+  def parseConfig(args: Array[String]): (CollectorConfig, Resolver[Id], IgluCirceClient[Id], Config, Boolean) = {
     case class MicroConfig(
       collectorConfigFile: Option[File] = None,
-      igluConfigFile: Option[File] = None
+      igluConfigFile: Option[File] = None,
+      printEnrichedTsv: Boolean = false
     )
 
     val parser = new scopt.OptionParser[MicroConfig](buildinfo.BuildInfo.name) {
@@ -80,11 +81,15 @@ private[micro] object ConfigHelper {
             case None => success
           }
         )
+      opt[Unit]("print")
+        .optional()
+        .text("Print enriched TSV to standard output")
+        .action((_, c: MicroConfig) => c.copy(printEnrichedTsv = true))
     }
     
-    val (collectorFile, igluFile) = parser.parse(args, MicroConfig()) match {
+    val (collectorFile, igluFile, printEnrichedTsvEnabled) = parser.parse(args, MicroConfig()) match {
       case Some(microConfig: MicroConfig) =>
-        (microConfig.collectorConfigFile, microConfig.igluConfigFile)
+        (microConfig.collectorConfigFile, microConfig.igluConfigFile, microConfig.printEnrichedTsv)
       case None =>
         throw new RuntimeException("Problem while parsing arguments") // should never be called
     }
@@ -111,7 +116,8 @@ private[micro] object ConfigHelper {
       ConfigSource.fromConfig(collectorConfig.getConfig("collector")).loadOrThrow[CollectorConfig],
       resolver,
       igluClient,
-      collectorConfig
+      collectorConfig,
+      printEnrichedTsvEnabled
     )
   }
 

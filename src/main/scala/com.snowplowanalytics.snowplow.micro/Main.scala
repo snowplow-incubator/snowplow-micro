@@ -35,8 +35,8 @@ object Main {
   lazy val logger = LoggerFactory.getLogger(getClass())
 
   def main(args: Array[String]): Unit = {
-    val (collectorConf, igluResolver, igluClient, akkaConf) = ConfigHelper.parseConfig(args)
-    run(collectorConf, igluResolver, igluClient, akkaConf)
+    val (collectorConf, igluResolver, igluClient, akkaConf, printEnrichedTsv) = ConfigHelper.parseConfig(args)
+    run(collectorConf, igluResolver, igluClient, akkaConf, printEnrichedTsv)
   }
 
   /** Create the in-memory sink,
@@ -47,12 +47,13 @@ object Main {
     collectorConf: CollectorConfig,
     igluResolver: Resolver[Id],
     igluClient: IgluCirceClient[Id],
-    akkaConf: Config
+    akkaConf: Config,
+    printEnrichedTsv: Boolean
   ): Unit = {
     implicit val system = ActorSystem.create("snowplow-micro", akkaConf)
     implicit val executionContext = system.dispatcher
 
-    val sinks = CollectorSinks(MemorySink(igluClient), MemorySink(igluClient))
+    val sinks = CollectorSinks(MemorySink(igluClient, printEnrichedTsv), MemorySink(igluClient, printEnrichedTsv))
     val igluService = new IgluService(igluResolver)
 
     val routes = Routing.getMicroRoutes(collectorConf, sinks, igluService)
