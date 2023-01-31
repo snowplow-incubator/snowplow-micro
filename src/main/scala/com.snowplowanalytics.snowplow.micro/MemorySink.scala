@@ -18,6 +18,8 @@ import cats.data.Validated
 
 import org.joda.time.DateTime
 
+import org.slf4j.LoggerFactory
+
 import com.snowplowanalytics.iglu.client.IgluCirceClient
 
 import com.snowplowanalytics.snowplow.analytics.scalasdk.{Event, EventConverter}
@@ -43,11 +45,18 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], prin
   val MaxBytes = Int.MaxValue
   private val enrichmentRegistry = new EnrichmentRegistry[Id]()
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
+  private lazy val logger = LoggerFactory.getLogger("EventLog")
 
   /** Function of the [[Sink]] called for all the events received by a collector. */
   override def storeRawEvents(events: List[Array[Byte]], key: String) = {
     events.foreach(bytes => processThriftBytes(bytes, igluClient, enrichmentRegistry, processor))
   }
+
+  private def formatEvent(event: GoodEvent) =
+    s"id:${event.event.event_id}" +
+    event.event.app_id.fold("")(i => s" app_id:$i") +
+    event.eventType.fold("")(t => s" type:$t") +
+    event.schema.fold("")(s => s" ($s)")
 
   /** Deserialize Thrift bytes into `CollectorPayload`s,
     * validate them and store the result in [[ValidationCache]].
@@ -69,6 +78,7 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], prin
                   case (rawEvent, (good, bad)) =>
                     validateEvent(rawEvent, igluClient, enrichmentRegistry, processor) match {
                       case Right(goodEvent) =>
+                        logger.info(s"GOOD ${formatEvent(goodEvent)}")
                         (goodEvent :: good, bad)
                       case Left(errors) =>
                         val badEvent =
@@ -77,6 +87,7 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], prin
                           Some(rawEvent),
                           errors
                         )
+                        logger.warn(s"BAD ${badEvent.errors.head}")
                         (good, badEvent :: bad)
                     }
                 }
@@ -89,14 +100,17 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], prin
                 }
               case Validated.Invalid(badRow) =>
                 val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.compact))
+                logger.warn(s"BAD ${bad.errors.head}")
                 ValidationCache.addToBad(List(bad))
             }
           case None =>
             val bad = BadEvent(None, None, List("No payload."))
+            logger.warn(s"BAD ${bad.errors.head}")
             ValidationCache.addToBad(List(bad))
         }
       case Validated.Invalid(badRows) =>
         val bad = BadEvent(None, None, List("Can't deserialize Thrift bytes.") ++ badRows.toList.map(_.compact))
+        logger.warn(s"BAD ${bad.errors.head}")
         ValidationCache.addToBad(List(bad))
     }
 
@@ -120,7 +134,7 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], prin
           .toEither
       }
       .value.bimap(
-      badRow => List("Error while validating the event", badRow.compact),
+      badRow => List("Error while validating the event.", badRow.compact),
       enriched => GoodEvent(rawEvent, enriched.event, getEnrichedSchema(enriched), getEnrichedContexts(enriched), enriched)
     )
 
