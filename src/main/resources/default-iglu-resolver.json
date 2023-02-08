@@ -5,8 +5,8 @@
     "repositories": [
       {
         "name": "Iglu Central",
-        "priority": 0,
-        "vendorPrefixes": [ "com.snowplowanalytics" ],
+        "priority": 1,
+        "vendorPrefixes": [],
         "connection": {
           "http": {
             "uri": "http://iglucentral.com"
