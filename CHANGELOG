@@ -1,3 +1,7 @@
+Version 1.5.0 (2023-02-08)
+--------------------------
+Add MICRO_IGLU_REGISTRY_URL and MICRO_IGLU_API_KEY environment variables (#132)
+
 Version 1.4.0 (2023-01-31)
 --------------------------
 Add the --output-tsv (-t) option that outputs [enriched TSV](https://docs.snowplow.io/docs/understanding-your-pipeline/canonical-event/understanding-the-enriched-tsv-format/) (#129)
