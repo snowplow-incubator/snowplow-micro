@@ -5,111 +5,25 @@
 [![Build Status][gh-actions-image]][gh-actions]
 [![License][license-image]][license]
 
-Snowplow Micro is built to enable companies running [Snowplow][snowplow] to build automated CI/CD workflows ensuring upstream data quality.
+Snowplow Micro is a lightweight version of the Snowplow pipeline. It’s great for:
+* Getting familiar with Snowplow
+* Debugging and testing, including automated testing
 
-It is a very small version of a full Snowplow data collection pipeline: small enough that it can be launched by an automated test suite. Snowplow Micro then exposes an API, that can be queried in order to validate your data collection setup as your digital products evolve.
+Just like a real Snowplow pipeline, Micro receives and validates events sent by your tracking code.
 
-## Quick start
+Learn more in the documentation: https://docs.snowplow.io/docs/getting-started-with-micro/basic-usage/
 
-### Using Docker
-
-Snowplow Micro is hosted on Docker Hub ([snowplow/snowplow-micro][docker-micro]) with images available for both `amd64` and `arm64` architectures.
-
-The following command can be used to run Micro with the default configuration:
-
-```bash
-docker run -p 9090:9090 snowplow/snowplow-micro:1.5.0
-```
-
-A [distroless][distroless-repo] image is also provided, which benefits from being smaller and more secure, with the downside of basic utilities (such as a shell) not being present in the image.
-
-The distroless image is tagged as `snowplow/snowplow-micro:1.5.0-distroless` on Docker Hub.
-
-#### Configuring Micro
-
-##### Stream Collector config
-
-[Stream Collector][stream-collector] collects the events sent by Snowplow trackers. The options for configuring the collector are [available here][stream-collector-config]. A minimal example of this file exists at [`example/micro.conf`](./example/micro.conf)
-
-##### Iglu resolver config
-
-The [Iglu][iglu] resolver is used to define where schemas are fetched from. The instructions for configuration are [available here][iglu-resolver-config]. An example of this file exists at [`example/iglu.json`](./example/iglu.json)
-
-##### Running Micro with configuration files
-
-The configuration files must be placed in a folder that is mounted in the Docker container, and the port configured for Micro needs to be exposed. The following examples assume that the configuration files are in the directory `./example/` and that port `9090` is the one to bind on your host machine:
-
-```bash
-docker run \
-  --mount type=bind,source=$(pwd)/example,destination=/config \
-  -p 9090:9090 \
-  snowplow/snowplow-micro:1.5.0 \
-  --collector-config /config/micro.conf \
-  --iglu /config/iglu.json
-```
-
-In order to use the embedded Iglu capabilities, the command is the same as above. You only need to add your local Iglu repository in the configurations directory named as `iglu-client-embedded`, as also shown in the [example][example-dir]:
-
-```text
-example
-├── iglu-client-embedded
-│   └── schemas
-│       └── com.myvendor
-│           └── myschema
-│               └── jsonschema
-│                   └── 1-0-0
-├── iglu.json
-└── micro.conf
-```
-
-### Using Java
-
-If you cannot use Docker, a Snowplow Micro jar file is hosted on the [Github releases][gh-releases]. As an example, run Micro as:
-
-```bash
-java -jar snowplow-micro-1.5.0.jar --collector-config example/micro.conf --iglu example/iglu.json
-```
-
-In case you also want an embedded Iglu, apply the same directory structure as shown above and run for example:
-
-```bash
-# Unix
-java -cp snowplow-micro-1.5.0.jar:example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
-# Windows
-java -cp snowplow-micro-1.5.0.jar;example com.snowplowanalytics.snowplow.micro.Main --collector-config example/micro.conf --iglu example/iglu.json
-```
-
-### Send events and start testing
-
-Once you have successfully started Snowplow Micro, its collector endpoint will be `http://localhost:{PORT}`, e.g. `http://localhost:9090`, to which you can point any of the [Snowplow Trackers][snowplow-trackers] and start sending events.
-
-Then, in your testing workflows, you can use Micro's [REST API][micro-rest-api] endpoints to assert on the collected events:
-
-- `/micro/all`: summary
-- `/micro/good`: good events
-- `/micro/bad`: bad events
-- `/micro/reset`: clears cache
-
-Additionally, if you are using the embedded Iglu capabilities, you can also use the `/micro/iglu` endpoint to check whether your custom schemas can be resolved as:
-
-- `/micro/iglu/{vendorName}/{schemaName}/jsonschema/{schemaVersion}` (for example `/micro/iglu/com.myvendor/myschema/jsonschema/1-0-0`)
-
-## Find out more
-
-| Technical Docs                    | Roadmap                         | Contributing                              |
-|:---------------------------------:|:-------------------------------:|:-----------------------------------------:|
-| [![i1][techdocs-image]][techdocs] | [![i2][roadmap-image]][roadmap] | [![i3][contributing-image]][contributing] |
-| [Technical Docs][techdocs]        | [Roadmap][roadmap]              | [Contributing][contributing]              |
+---
 
 ## Maintainer quick start
 
 Assuming [Git][git] and [sbt][sbt]:
 
 ```text
-git clone git@github.com:snowplow-incubator/snowplow-micro-examples.git
+git clone git@github.com:snowplow-incubator/snowplow-micro.git
 cd snowplow-micro
 
-git clone --branch 2.7.1 --depth 1 git@github.com:snowplow/stream-collector.git
+git clone --branch 2.8.1 --depth 1 git@github.com:snowplow/stream-collector.git
 cd stream-collector
 sbt publishLocal && cd ..
 
@@ -118,7 +32,7 @@ sbt test
 
 ## Copyright and License
 
-Snowplow Micro is copyright 2019-2022 Snowplow Analytics Ltd.
+Snowplow Micro is copyright 2019-2023 Snowplow Analytics Ltd.
 
 Licensed under the **[Apache License, Version 2.0][license]** (the "License");
 you may not use this software except in compliance with the License.
