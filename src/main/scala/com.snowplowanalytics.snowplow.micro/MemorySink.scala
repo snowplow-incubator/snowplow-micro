@@ -41,9 +41,8 @@ import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
   * For each event it tries to validate it using Common Enrich,
   * and then stores the results in-memory in [[ValidationCache]].
   */
-private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], outputEnrichedTsv: Boolean) extends Sink {
+private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], enrichmentRegistry: EnrichmentRegistry[Id], outputEnrichedTsv: Boolean) extends Sink {
   val MaxBytes = Int.MaxValue
-  private val enrichmentRegistry = new EnrichmentRegistry[Id]()
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
   private lazy val logger = LoggerFactory.getLogger("EventLog")
 

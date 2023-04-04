@@ -13,26 +13,30 @@
 package com.snowplowanalytics.snowplow.micro
 
 import com.typesafe.config.{Config, ConfigFactory}
-
-import pureconfig.{ConfigFieldMapping, CamelCase, ConfigSource}
-import pureconfig.generic.{ProductHint, FieldCoproductHint}
+import pureconfig.{CamelCase, ConfigFieldMapping, ConfigSource}
+import pureconfig.generic.{FieldCoproductHint, ProductHint}
 import pureconfig.generic.auto._
-
 import cats.Id
+import cats.effect.Clock
 import cats.implicits._
-
 import io.circe.parser.parse
+import io.circe.syntax._
 
 import scala.io.Source
-
 import java.io.File
-
 import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.client.resolver.registries.Registry
+import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
+import com.snowplowanalytics.iglu.core.circe.CirceIgluCodecs._
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, SinkConfig}
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
+import com.snowplowanalytics.snowplow.enrich.common.utils.{BlockerF, JsonUtils}
+import io.circe.Json
 
 import java.net.URI
+import java.nio.file.{Path, Paths}
+import java.util.concurrent.TimeUnit
 
 /** Contain functions to parse the command line arguments,
   * to parse the configuration for the collector, Akka HTTP and Iglu
@@ -49,9 +53,28 @@ private[micro] object ConfigHelper {
 
   implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
 
+  implicit val clockProvider: Clock[Id] = new Clock[Id] {
+    final def realTime(unit: TimeUnit): Id[Long] =
+      unit.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
+
+    final def monotonic(unit: TimeUnit): Id[Long] =
+      unit.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
+  }
+
+  type EitherS[A] = Either[String, A]
+
+  case class MicroConfig(
+    collectorConfig: CollectorConfig,
+    igluResolver: Resolver[Id],
+    igluClient: IgluCirceClient[Id],
+    enrichmentRegistry: EnrichmentRegistry[Id],
+    akkaConfig: Config,
+    outputEnrichedTsv: Boolean
+  )
+
   /** Parse the command line arguments and the configuration files. */
-  def parseConfig(args: Array[String]): (CollectorConfig, Resolver[Id], IgluCirceClient[Id], Config, Boolean) = {
-    case class MicroConfig(
+  def parseConfig(args: Array[String]): MicroConfig = {
+    case class CommandLineOptions(
       collectorConfigFile: Option[File] = None,
       igluConfigFile: Option[File] = None,
       outputEnrichedTsv: Boolean = false
@@ -64,7 +87,7 @@ private[micro] object ConfigHelper {
       }.mkString("\n")
     }
 
-    val parser = new scopt.OptionParser[MicroConfig](buildinfo.BuildInfo.name) {
+    val parser = new scopt.OptionParser[CommandLineOptions](buildinfo.BuildInfo.name) {
       head(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
       help("help")
       version("version")
@@ -72,7 +95,7 @@ private[micro] object ConfigHelper {
         .optional()
         .valueName("<filename>")
         .text("Configuration file for collector")
-        .action((f: Option[File], c: MicroConfig) => c.copy(collectorConfigFile = f))
+        .action((f: Option[File], c: CommandLineOptions) => c.copy(collectorConfigFile = f))
         .validate(f =>
           f match {
             case Some(file) =>
@@ -85,7 +108,7 @@ private[micro] object ConfigHelper {
         .optional()
         .valueName("<filename>")
         .text("Configuration file for Iglu Client")
-        .action((f: Option[File], c: MicroConfig) => c.copy(igluConfigFile = f))
+        .action((f: Option[File], c: CommandLineOptions) => c.copy(igluConfigFile = f))
         .validate(f =>
           f match {
             case Some(file) =>
@@ -97,7 +120,7 @@ private[micro] object ConfigHelper {
       opt[Unit]('t', "output-tsv")
         .optional()
         .text("Print events in TSV format to standard output")
-        .action((_, c: MicroConfig) => c.copy(outputEnrichedTsv = true))
+        .action((_, c: CommandLineOptions) => c.copy(outputEnrichedTsv = true))
       note(
         "\nSupported environment variables:\n\n" + formatEnvironmentVariables(
           EnvironmentVariables.igluRegistryUrl ->
@@ -108,7 +131,7 @@ private[micro] object ConfigHelper {
       )
     }
 
-    val config = parser.parse(args, MicroConfig()) getOrElse {
+    val config = parser.parse(args, CommandLineOptions()) getOrElse {
       throw new RuntimeException("Problem while parsing arguments") // should never be called
     }
 
@@ -138,10 +161,19 @@ private[micro] object ConfigHelper {
         throw new IllegalArgumentException(s"Error while reading Iglu config file: $e.")
     }
 
-    (
+    val enrichmentDirectory = Option(getClass.getResource("/enrichments"))
+      .fold(Paths.get("."))(url => Paths.get(url.toURI))
+    val enrichmentRegistry = getEnrichmentRegistryFromPath(enrichmentDirectory, igluClient) match {
+      case Right(ok) => ok
+      case Left(e) =>
+        throw new IllegalArgumentException(s"Error while reading enrichment config file(s): $e.")
+    }
+
+    MicroConfig(
       ConfigSource.fromConfig(collectorConfig.getConfig("collector")).loadOrThrow[CollectorConfig],
       resolver,
       igluClient,
+      enrichmentRegistry,
       collectorConfig,
       config.outputEnrichedTsv
     )
@@ -156,4 +188,23 @@ private[micro] object ConfigHelper {
       resolver <- Resolver.fromConfig[Id](config).leftMap(_.show).value
       completeResolver = resolver.copy(repos = resolver.repos ++ extraRegistry)
     } yield (completeResolver, IgluCirceClient.fromResolver[Id](completeResolver, config.cacheSize))
+
+  def getEnrichmentRegistryFromPath(path: Path, igluClient: IgluCirceClient[Id]) = {
+    val schemaKey = SchemaKey(
+      "com.snowplowanalytics.snowplow",
+      "enrichments",
+      "jsonschema",
+      SchemaVer.Full(1, 0, 0)
+    )
+    val config = Option(path.toFile.listFiles).fold(List.empty[File])(_.toList)
+      .filter(_.getName.endsWith(".json"))
+      .map(scala.io.Source.fromFile(_).mkString)
+      .map(JsonUtils.extractJson).sequence[EitherS, Json]
+      .map(jsonConfigs => SelfDescribingData[Json](schemaKey, Json.fromValues(jsonConfigs)).asJson)
+    for {
+      c <- config
+      parsed <- EnrichmentRegistry.parse(c, igluClient, localMode = false).leftMap(_.toList.mkString("; ")).toEither
+      registry <- EnrichmentRegistry.build[Id](parsed, BlockerF.noop).value
+    } yield registry
+  }
 }

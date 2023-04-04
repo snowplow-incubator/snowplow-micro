@@ -14,17 +14,10 @@ package com.snowplowanalytics.snowplow.micro
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-
-import cats.Id
-
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorSinks
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.Enrichment
+import com.snowplowanalytics.snowplow.micro.ConfigHelper.MicroConfig
 import org.slf4j.LoggerFactory
-
-import com.typesafe.config.Config
-
-import com.snowplowanalytics.iglu.client.IgluCirceClient
-import com.snowplowanalytics.iglu.client.resolver.Resolver
-
-import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, CollectorSinks}
 
 /** Read the configuration and instantiate Snowplow Micro,
   * which acts as a `Collector` and has an in-memory sink
@@ -35,31 +28,37 @@ object Main {
   lazy val logger = LoggerFactory.getLogger(getClass())
 
   def main(args: Array[String]): Unit = {
-    val (collectorConf, igluResolver, igluClient, akkaConf, outputEnrichedTsv) = ConfigHelper.parseConfig(args)
-    run(collectorConf, igluResolver, igluClient, akkaConf, outputEnrichedTsv)
+    val config = ConfigHelper.parseConfig(args)
+    run(config)
   }
 
   /** Create the in-memory sink,
     * get the endpoints for both the collector and to query Snowplow Micro,
     * and start the HTTP server.
     */
-  def run(
-    collectorConf: CollectorConfig,
-    igluResolver: Resolver[Id],
-    igluClient: IgluCirceClient[Id],
-    akkaConf: Config,
-    outputEnrichedTsv: Boolean
-  ): Unit = {
-    implicit val system = ActorSystem.create("snowplow-micro", akkaConf)
+  def run(config: MicroConfig): Unit = {
+    implicit val system = ActorSystem.create("snowplow-micro", config.akkaConfig)
     implicit val executionContext = system.dispatcher
 
-    val sinks = CollectorSinks(MemorySink(igluClient, outputEnrichedTsv), MemorySink(igluClient, outputEnrichedTsv))
-    val igluService = new IgluService(igluResolver)
+    val loadedEnrichments = config.enrichmentRegistry.productIterator.toList.collect {
+      case Some(e: Enrichment) => e.getClass.getSimpleName
+    }
+    if (loadedEnrichments.nonEmpty) {
+      logger.info(s"Enabled enrichments: ${loadedEnrichments.mkString(", ")}")
+    } else {
+      logger.info(s"No enrichments enabled.")
+    }
 
-    val routes = Routing.getMicroRoutes(collectorConf, sinks, igluService)
+    val sinks = CollectorSinks(
+      MemorySink(config.igluClient, config.enrichmentRegistry, config.outputEnrichedTsv),
+      MemorySink(config.igluClient, config.enrichmentRegistry, config.outputEnrichedTsv)
+    )
+    val igluService = new IgluService(config.igluResolver)
+
+    val routes = Routing.getMicroRoutes(config.collectorConfig, sinks, igluService)
 
     Http()
-      .newServerAt(collectorConf.interface, collectorConf.port)
+      .newServerAt(config.collectorConfig.interface, config.collectorConfig.port)
       .bind(routes)
       .foreach { binding =>
         logger.info(s"REST interface bound to ${binding.localAddress}")
