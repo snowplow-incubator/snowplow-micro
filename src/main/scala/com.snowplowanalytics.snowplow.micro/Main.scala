@@ -14,10 +14,16 @@ package com.snowplowanalytics.snowplow.micro
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import cats.Id
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorSinks
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.Enrichment
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf}
+import com.snowplowanalytics.snowplow.enrich.common.utils.BlockerF
 import com.snowplowanalytics.snowplow.micro.ConfigHelper.MicroConfig
 import org.slf4j.LoggerFactory
+
+import java.io.File
+import scala.sys.process._
 
 /** Read the configuration and instantiate Snowplow Micro,
   * which acts as a `Collector` and has an in-memory sink
@@ -32,15 +38,19 @@ object Main {
     run(config)
   }
 
-  /** Create the in-memory sink,
-    * get the endpoints for both the collector and to query Snowplow Micro,
-    * and start the HTTP server.
-    */
-  def run(config: MicroConfig): Unit = {
-    implicit val system = ActorSystem.create("snowplow-micro", config.akkaConfig)
-    implicit val executionContext = system.dispatcher
+  def setupEnrichments(configs: List[EnrichmentConf]): EnrichmentRegistry[Id] = {
+    configs.flatMap(_.filesToCache).foreach { case (uri, location) =>
+      logger.info(s"Downloading ${uri}...")
+      uri.toURL #> new File(location) !!
+    }
 
-    val loadedEnrichments = config.enrichmentRegistry.productIterator.toList.collect {
+    val enrichmentRegistry = EnrichmentRegistry.build[Id](configs, BlockerF.noop).value match {
+      case Right(ok) => ok
+      case Left(e) =>
+        throw new IllegalArgumentException(s"Error while enabling enrichments: $e.")
+    }
+
+    val loadedEnrichments = enrichmentRegistry.productIterator.toList.collect {
       case Some(e: Enrichment) => e.getClass.getSimpleName
     }
     if (loadedEnrichments.nonEmpty) {
@@ -49,9 +59,21 @@ object Main {
       logger.info(s"No enrichments enabled.")
     }
 
+    enrichmentRegistry
+  }
+
+  /** Create the in-memory sink,
+    * get the endpoints for both the collector and to query Snowplow Micro,
+    * and start the HTTP server.
+    */
+  def run(config: MicroConfig): Unit = {
+    implicit val system = ActorSystem.create("snowplow-micro", config.akkaConfig)
+    implicit val executionContext = system.dispatcher
+
+    val enrichmentRegistry = setupEnrichments(config.enrichmentConfigs)
     val sinks = CollectorSinks(
-      MemorySink(config.igluClient, config.enrichmentRegistry, config.outputEnrichedTsv),
-      MemorySink(config.igluClient, config.enrichmentRegistry, config.outputEnrichedTsv)
+      MemorySink(config.igluClient, enrichmentRegistry, config.outputEnrichedTsv),
+      MemorySink(config.igluClient, enrichmentRegistry, config.outputEnrichedTsv)
     )
     val igluService = new IgluService(config.igluResolver)
 

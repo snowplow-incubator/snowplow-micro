@@ -12,31 +12,31 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
-import com.typesafe.config.{Config, ConfigFactory}
-import pureconfig.{CamelCase, ConfigFieldMapping, ConfigSource}
-import pureconfig.generic.{FieldCoproductHint, ProductHint}
-import pureconfig.generic.auto._
 import cats.Id
 import cats.effect.Clock
 import cats.implicits._
-import io.circe.parser.parse
-import io.circe.syntax._
-
-import scala.io.Source
-import java.io.File
 import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.client.resolver.registries.Registry
-import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
 import com.snowplowanalytics.iglu.core.circe.CirceIgluCodecs._
+import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, SinkConfig}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
-import com.snowplowanalytics.snowplow.enrich.common.utils.{BlockerF, JsonUtils}
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.EnrichmentConf
+import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
+import com.typesafe.config.{Config, ConfigFactory}
 import io.circe.Json
+import io.circe.parser.parse
+import io.circe.syntax._
+import pureconfig.generic.auto._
+import pureconfig.generic.{FieldCoproductHint, ProductHint}
+import pureconfig.{CamelCase, ConfigFieldMapping, ConfigSource}
 
+import java.io.File
 import java.net.URI
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.TimeUnit
+import scala.io.Source
 
 /** Contain functions to parse the command line arguments,
   * to parse the configuration for the collector, Akka HTTP and Iglu
@@ -53,6 +53,7 @@ private[micro] object ConfigHelper {
 
   implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
 
+  // Copied from Enrich - necessary for parsing enrichment configs
   implicit val clockProvider: Clock[Id] = new Clock[Id] {
     final def realTime(unit: TimeUnit): Id[Long] =
       unit.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
@@ -67,7 +68,7 @@ private[micro] object ConfigHelper {
     collectorConfig: CollectorConfig,
     igluResolver: Resolver[Id],
     igluClient: IgluCirceClient[Id],
-    enrichmentRegistry: EnrichmentRegistry[Id],
+    enrichmentConfigs: List[EnrichmentConf],
     akkaConfig: Config,
     outputEnrichedTsv: Boolean
   )
@@ -163,7 +164,7 @@ private[micro] object ConfigHelper {
 
     val enrichmentDirectory = Option(getClass.getResource("/enrichments"))
       .fold(Paths.get("."))(url => Paths.get(url.toURI))
-    val enrichmentRegistry = getEnrichmentRegistryFromPath(enrichmentDirectory, igluClient) match {
+    val enrichmentConfigs = getEnrichmentRegistryFromPath(enrichmentDirectory, igluClient) match {
       case Right(ok) => ok
       case Left(e) =>
         throw new IllegalArgumentException(s"Error while reading enrichment config file(s): $e.")
@@ -173,7 +174,7 @@ private[micro] object ConfigHelper {
       ConfigSource.fromConfig(collectorConfig.getConfig("collector")).loadOrThrow[CollectorConfig],
       resolver,
       igluClient,
-      enrichmentRegistry,
+      enrichmentConfigs,
       collectorConfig,
       config.outputEnrichedTsv
     )
@@ -196,15 +197,15 @@ private[micro] object ConfigHelper {
       "jsonschema",
       SchemaVer.Full(1, 0, 0)
     )
-    val config = Option(path.toFile.listFiles).fold(List.empty[File])(_.toList)
+    // Loosely adapted from Enrich#localEnrichmentConfigsExtractor
+    Option(path.toFile.listFiles).fold(List.empty[File])(_.toList)
       .filter(_.getName.endsWith(".json"))
       .map(scala.io.Source.fromFile(_).mkString)
       .map(JsonUtils.extractJson).sequence[EitherS, Json]
       .map(jsonConfigs => SelfDescribingData[Json](schemaKey, Json.fromValues(jsonConfigs)).asJson)
-    for {
-      c <- config
-      parsed <- EnrichmentRegistry.parse(c, igluClient, localMode = false).leftMap(_.toList.mkString("; ")).toEither
-      registry <- EnrichmentRegistry.build[Id](parsed, BlockerF.noop).value
-    } yield registry
+      .flatMap { jsonConfig =>
+        EnrichmentRegistry.parse(jsonConfig, igluClient, localMode = false)
+          .leftMap(_.toList.mkString("; ")).toEither
+      }
   }
 }
