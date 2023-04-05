@@ -66,7 +66,7 @@ class MemorySinkSpec extends Specification {
       val withoutTimestamp = raw.copy(context = raw.context.copy(timestamp = None))
       val expected = "Error while validating the event"
       sink.validateEvent(withoutTimestamp, igluClient, enrichmentRegistry, processor) must beLeft.like {
-        case errors if errors.exists(_.contains(expected)) => ok
+        case (errors, _) if errors.exists(_.contains(expected)) => ok
         case errs => ko(s"$errs doesn't contain [$expected]")
       }
     }
@@ -76,7 +76,7 @@ class MemorySinkSpec extends Specification {
       val withoutEvent = raw.copy(parameters = raw.parameters - "e")
       val expected = "Error while validating the event"
       sink.validateEvent(withoutEvent, igluClient, enrichmentRegistry, processor) must beLeft.like {
-        case errors if errors.exists(_.contains(expected)) => ok
+        case (errors, _) if errors.exists(_.contains(expected)) => ok
         case errs => ko(s"$errs doesn't contain [$expected]")
       }
     }
@@ -85,7 +85,7 @@ class MemorySinkSpec extends Specification {
       val raw = buildRawEvent(Some(buildUnstruct(sdjInvalid)))
       val expected = "Error while validating the event"
       sink.validateEvent(raw, igluClient, enrichmentRegistry, processor) must beLeft.like {
-        case errors if errors.exists(_.contains(expected)) => ok
+        case (errors, _) if errors.exists(_.contains(expected)) => ok
         case errs => ko(s"$errs doesn't contain [$expected]")
       }
     }
@@ -94,7 +94,7 @@ class MemorySinkSpec extends Specification {
       val raw = buildRawEvent(None, Some(buildContexts(List(sdjInvalid))))
       val expected = "Error while validating the event"
       sink.validateEvent(raw, igluClient, enrichmentRegistry, processor) must beLeft.like {
-        case errors if errors.exists(_.contains(expected)) => ok
+        case (errors, _) if errors.exists(_.contains(expected)) => ok
         case errs => ko(s"$errs doesn't contain [$expected]")
       }
     }
@@ -103,7 +103,7 @@ class MemorySinkSpec extends Specification {
       val raw = buildRawEvent(Some(buildUnstruct(sdjDoesNotExist)))
       val expected = "Error while validating the event"
       sink.validateEvent(raw, igluClient, enrichmentRegistry, processor) must beLeft.like {
-        case errors if errors.exists(_.contains(expected)) => ok
+        case (errors, _) if errors.exists(_.contains(expected)) => ok
         case errs => ko(s"$errs doesn't contain [$expected]")
       }
     }
@@ -112,7 +112,7 @@ class MemorySinkSpec extends Specification {
       val raw = buildRawEvent(None, Some(buildContexts(List(sdjDoesNotExist))))
       val expected = "Error while validating the event"
       sink.validateEvent(raw, igluClient, enrichmentRegistry, processor) must beLeft.like {
-        case errors if errors.exists(_.contains(expected)) => ok
+        case (errors, _) if errors.exists(_.contains(expected)) => ok
         case errs => ko(s"$errs doesn't contain [$expected]")
       }
     }

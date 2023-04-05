@@ -198,7 +198,8 @@ private[micro] object ConfigHelper {
       SchemaVer.Full(1, 0, 0)
     )
     // Loosely adapted from Enrich#localEnrichmentConfigsExtractor
-    Option(path.toFile.listFiles).fold(List.empty[File])(_.toList)
+    val directory = Option(path.toFile.listFiles).fold(List.empty[File])(_.toList)
+    val configs = directory
       .filter(_.getName.endsWith(".json"))
       .map(scala.io.Source.fromFile(_).mkString)
       .map(JsonUtils.extractJson).sequence[EitherS, Json]
@@ -207,5 +208,10 @@ private[micro] object ConfigHelper {
         EnrichmentRegistry.parse(jsonConfig, igluClient, localMode = false)
           .leftMap(_.toList.mkString("; ")).toEither
       }
+    val scripts = directory
+      .filter(_.getName.endsWith(".js"))
+      .map(scala.io.Source.fromFile(_).mkString)
+      .map(EnrichmentConf.JavascriptScriptConf(schemaKey, _))
+    configs.map(scripts ::: _)
   }
 }

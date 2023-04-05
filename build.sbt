@@ -58,6 +58,7 @@ lazy val dockerCommon = Seq(
   Docker / daemonUserUid := None,
   dockerRepository := Some("snowplow"),
   scriptClasspath += "/config",
+  Universal / javaOptions ++= Seq("-Dnashorn.args=--language=es6")
 )
 
 lazy val microSettingsDistroless = dockerCommon ++ Seq(
@@ -66,6 +67,7 @@ lazy val microSettingsDistroless = dockerCommon ++ Seq(
   Docker / daemonGroup := "nonroot",
   dockerEntrypoint := Seq(
     "java",
+    "-Dnashorn.args=--language=es6",
     "-cp",
     s"/opt/snowplow/lib/${(packageJavaClasspathJar / artifactPath).value.getName}:/config",
     "com.snowplowanalytics.snowplow.micro.Main"
