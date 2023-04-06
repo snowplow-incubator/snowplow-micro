@@ -15,23 +15,19 @@ package com.snowplowanalytics.snowplow.micro
 import cats.implicits._
 import cats.Id
 import cats.data.Validated
-
+import io.circe.syntax._
 import org.joda.time.DateTime
-
 import org.slf4j.LoggerFactory
-
 import com.snowplowanalytics.iglu.client.IgluCirceClient
-
 import com.snowplowanalytics.snowplow.analytics.scalasdk.{Event, EventConverter}
-import com.snowplowanalytics.snowplow.badrows.{BadRow, Payload}
+import com.snowplowanalytics.snowplow.badrows.{BadRow, Failure, Payload, Processor}
 import com.snowplowanalytics.snowplow.collectors.scalastream.sinks.Sink
 import com.snowplowanalytics.snowplow.enrich.common.adapters.{AdapterRegistry, RawEvent}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.{EnrichmentManager, EnrichmentRegistry}
 import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
 import com.snowplowanalytics.snowplow.enrich.common.utils.ConversionUtils
-
-import com.snowplowanalytics.snowplow.badrows.Processor
 import IdImplicits._
+import com.snowplowanalytics.snowplow.badrows.BadRow.{EnrichmentFailures, SchemaViolations, TrackerProtocolViolations}
 import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
 
 /** Sink of the collector that Snowplow Micro is.
@@ -41,9 +37,8 @@ import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
   * For each event it tries to validate it using Common Enrich,
   * and then stores the results in-memory in [[ValidationCache]].
   */
-private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], outputEnrichedTsv: Boolean) extends Sink {
+private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], enrichmentRegistry: EnrichmentRegistry[Id], outputEnrichedTsv: Boolean) extends Sink {
   val MaxBytes = Int.MaxValue
-  private val enrichmentRegistry = new EnrichmentRegistry[Id]()
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
   private lazy val logger = LoggerFactory.getLogger("EventLog")
 
@@ -57,6 +52,16 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], outp
     event.event.app_id.fold("")(i => s" app_id:$i") +
     event.eventType.fold("")(t => s" type:$t") +
     event.schema.fold("")(s => s" ($s)")
+
+  private def formatBadRow(badRow: BadRow) = badRow match {
+    case TrackerProtocolViolations(_, Failure.TrackerProtocolViolations(_, _, _, messages), _) =>
+      messages.map(_.asJson).toList.mkString
+    case SchemaViolations(_, Failure.SchemaViolations(_, messages), _) =>
+      messages.map(_.asJson).toList.mkString
+    case EnrichmentFailures(_, Failure.EnrichmentFailures(_, messages), _) =>
+      messages.map(_.message.asJson).toList.mkString
+    case _ => "Error while validating the event."
+  }
 
   /** Deserialize Thrift bytes into `CollectorPayload`s,
     * validate them and store the result in [[ValidationCache]].
@@ -80,14 +85,14 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], outp
                       case Right(goodEvent) =>
                         logger.info(s"GOOD ${formatEvent(goodEvent)}")
                         (goodEvent :: good, bad)
-                      case Left(errors) =>
+                      case Left((errors, badRow)) =>
                         val badEvent =
                         BadEvent(
                           Some(collectorPayload),
                           Some(rawEvent),
                           errors
                         )
-                        logger.warn(s"BAD ${badEvent.errors.head}")
+                        logger.warn(s"BAD ${formatBadRow(badRow)}")
                         (good, badEvent :: bad)
                     }
                 }
@@ -124,7 +129,7 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], outp
     igluClient: IgluCirceClient[Id],
     enrichmentRegistry: EnrichmentRegistry[Id],
     processor: Processor
-  ): Either[List[String], GoodEvent] =
+  ): Either[(List[String], BadRow), GoodEvent] =
     EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent, EtlPipeline.FeatureFlags(acceptInvalid = false, legacyEnrichmentOrder = false), ())
       .subflatMap { enriched =>
         EventConverter.fromEnriched(enriched)
@@ -134,7 +139,7 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], outp
           .toEither
       }
       .value.bimap(
-      badRow => List("Error while validating the event.", badRow.compact),
+      badRow => (List("Error while validating the event.", badRow.compact), badRow),
       enriched => GoodEvent(rawEvent, enriched.event, getEnrichedSchema(enriched), getEnrichedContexts(enriched), enriched)
     )
 

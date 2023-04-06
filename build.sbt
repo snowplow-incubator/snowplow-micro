@@ -14,6 +14,7 @@ lazy val buildSettings = Seq(
   scalaVersion := "2.12.14",
   scalacOptions := Settings.compilerOptions,
   javacOptions := Settings.javaCompilerOptions,
+  Runtime / unmanagedClasspath += baseDirectory.value / "config",
   resolvers ++= Dependencies.resolvers
 )
 
@@ -56,8 +57,10 @@ lazy val dockerCommon = Seq(
   Docker / packageName := "snowplow/snowplow-micro",
   Docker / defaultLinuxInstallLocation := "/opt/snowplow",
   Docker / daemonUserUid := None,
+  dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
   dockerRepository := Some("snowplow"),
   scriptClasspath += "/config",
+  Universal / javaOptions ++= Seq("-Dnashorn.args=--language=es6")
 )
 
 lazy val microSettingsDistroless = dockerCommon ++ Seq(
@@ -66,11 +69,11 @@ lazy val microSettingsDistroless = dockerCommon ++ Seq(
   Docker / daemonGroup := "nonroot",
   dockerEntrypoint := Seq(
     "java",
+    "-Dnashorn.args=--language=es6",
     "-cp",
     s"/opt/snowplow/lib/${(packageJavaClasspathJar / artifactPath).value.getName}:/config",
     "com.snowplowanalytics.snowplow.micro.Main"
   ),
-  dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
   sourceDirectory := (micro / sourceDirectory).value
 )
 
