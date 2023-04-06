@@ -14,6 +14,7 @@ lazy val buildSettings = Seq(
   scalaVersion := "2.12.14",
   scalacOptions := Settings.compilerOptions,
   javacOptions := Settings.javaCompilerOptions,
+  Runtime / unmanagedClasspath += baseDirectory.value / "config",
   resolvers ++= Dependencies.resolvers
 )
 

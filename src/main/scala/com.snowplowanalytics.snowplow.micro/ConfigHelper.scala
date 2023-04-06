@@ -162,13 +162,13 @@ private[micro] object ConfigHelper {
         throw new IllegalArgumentException(s"Error while reading Iglu config file: $e.")
     }
 
-    val enrichmentDirectory = Option(getClass.getResource("/enrichments"))
-      .fold(Paths.get("."))(url => Paths.get(url.toURI))
-    val enrichmentConfigs = getEnrichmentRegistryFromPath(enrichmentDirectory, igluClient) match {
-      case Right(ok) => ok
-      case Left(e) =>
-        throw new IllegalArgumentException(s"Error while reading enrichment config file(s): $e.")
-    }
+    val enrichmentConfigs = Option(getClass.getResource("/enrichments")).map { dir =>
+      getEnrichmentRegistryFromPath(Paths.get(dir.toURI), igluClient) match {
+        case Right(ok) => ok
+        case Left(e) =>
+          throw new IllegalArgumentException(s"Error while reading enrichment config file(s): $e.")
+      }
+    }.getOrElse(List.empty)
 
     MicroConfig(
       ConfigSource.fromConfig(collectorConfig.getConfig("collector")).loadOrThrow[CollectorConfig],
