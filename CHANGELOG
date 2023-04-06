@@ -1,3 +1,7 @@
+Version 1.6.0 (2023-04-06)
+--------------------------
+Add support for enrichments (#134)
+
 Version 1.5.0 (2023-02-08)
 --------------------------
 Add MICRO_IGLU_REGISTRY_URL and MICRO_IGLU_API_KEY environment variables (#132)

@@ -9,7 +9,7 @@ Snowplow Micro is a lightweight version of the Snowplow pipeline. It’s great f
 * Getting familiar with Snowplow
 * Debugging and testing, including automated testing
 
-Just like a real Snowplow pipeline, Micro receives and validates events sent by your tracking code.
+Just like a real Snowplow pipeline, Micro receives, validates and enriches events sent by your tracking code.
 
 Learn more in the documentation: https://docs.snowplow.io/docs/getting-started-with-micro/basic-usage/
 
