@@ -35,7 +35,9 @@ import pureconfig.{CamelCase, ConfigFieldMapping, ConfigSource}
 import java.io.File
 import java.net.URI
 import java.nio.file.{Path, Paths}
+import java.security.{KeyStore, SecureRandom}
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import scala.io.Source
 
 /** Contain functions to parse the command line arguments,
@@ -46,6 +48,7 @@ private[micro] object ConfigHelper {
   object EnvironmentVariables {
     val igluRegistryUrl = "MICRO_IGLU_REGISTRY_URL"
     val igluApiKey = "MICRO_IGLU_API_KEY"
+    val sslCertificatePassword = "MICRO_SSL_CERT_PASSWORD"
   }
 
   implicit def hint[T] =
@@ -70,6 +73,7 @@ private[micro] object ConfigHelper {
     igluClient: IgluCirceClient[Id],
     enrichmentConfigs: List[EnrichmentConf],
     akkaConfig: Config,
+    sslContext: Option[SSLContext],
     outputEnrichedTsv: Boolean
   )
 
@@ -127,7 +131,9 @@ private[micro] object ConfigHelper {
           EnvironmentVariables.igluRegistryUrl ->
             "The URL for an additional custom Iglu registry",
           EnvironmentVariables.igluApiKey ->
-            s"An optional API key for an Iglu registry defined with ${EnvironmentVariables.igluRegistryUrl}"
+            s"An optional API key for an Iglu registry defined with ${EnvironmentVariables.igluRegistryUrl}",
+          EnvironmentVariables.sslCertificatePassword ->
+            "The password for the optional SSL/TLS certificate in /config/ssl-certificate.p12. Enables HTTPS"
         )
       )
     }
@@ -170,12 +176,33 @@ private[micro] object ConfigHelper {
       }
     }.getOrElse(List.empty)
 
+    val sslContext = sys.env.get(EnvironmentVariables.sslCertificatePassword).map { password =>
+      // Adapted from https://doc.akka.io/docs/akka-http/current/server-side/server-https-support.html.
+      // We could use SSLContext.getDefault instead of all of this, but then we would need to
+      // force the user to add arcane -D flags when running Micro, which is not the best experience.
+      val keystore = KeyStore.getInstance("PKCS12")
+      val certificateFile = getClass.getClassLoader.getResourceAsStream("ssl-certificate.p12")
+      keystore.load(certificateFile, password.toCharArray)
+
+      val keyManagerFactory = KeyManagerFactory.getInstance("SunX509")
+      keyManagerFactory.init(keystore, password.toCharArray)
+
+      val trustManagerFactory = TrustManagerFactory.getInstance("SunX509")
+      trustManagerFactory.init(keystore)
+
+      val context = SSLContext.getInstance("TLS")
+      context.init(keyManagerFactory.getKeyManagers, trustManagerFactory.getTrustManagers, new SecureRandom)
+
+      context
+    }
+
     MicroConfig(
       ConfigSource.fromConfig(collectorConfig.getConfig("collector")).loadOrThrow[CollectorConfig],
       resolver,
       igluClient,
       enrichmentConfigs,
       collectorConfig,
+      sslContext,
       config.outputEnrichedTsv
     )
   }
