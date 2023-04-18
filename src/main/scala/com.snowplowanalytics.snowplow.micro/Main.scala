@@ -13,7 +13,7 @@
 package com.snowplowanalytics.snowplow.micro
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import akka.http.scaladsl.{ConnectionContext, Http}
 import cats.Id
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorSinks
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
@@ -85,5 +85,15 @@ object Main {
       .foreach { binding =>
         logger.info(s"REST interface bound to ${binding.localAddress}")
       }
+
+    config.sslContext.foreach { sslContext =>
+      Http()
+        .newServerAt(config.collectorConfig.interface, config.collectorConfig.ssl.port)
+        .enableHttps(ConnectionContext.httpsServer(sslContext))
+        .bind(routes)
+        .foreach { binding =>
+          logger.info(s"HTTPS REST interface bound to ${binding.localAddress}")
+        }
+    }
   }
 }
