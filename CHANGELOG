@@ -1,3 +1,7 @@
+Version 1.7.0 (2023-04-19)
+--------------------------
+Add support for serving HTTPS (#136)
+
 Version 1.6.0 (2023-04-06)
 --------------------------
 Add support for enrichments (#134)
