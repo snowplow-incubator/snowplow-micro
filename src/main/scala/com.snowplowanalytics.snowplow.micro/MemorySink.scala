@@ -12,23 +12,32 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
-import cats.implicits._
-import cats.Id
-import cats.data.Validated
-import io.circe.syntax._
 import org.joda.time.DateTime
+
 import org.slf4j.LoggerFactory
+
+import cats.implicits._
+import cats.data.Validated
+
+import io.circe.syntax._
+
+import cats.effect.IO
+
 import com.snowplowanalytics.iglu.client.IgluCirceClient
+
 import com.snowplowanalytics.snowplow.analytics.scalasdk.{Event, EventConverter}
+
 import com.snowplowanalytics.snowplow.badrows.{BadRow, Failure, Payload, Processor}
+
 import com.snowplowanalytics.snowplow.collectors.scalastream.sinks.Sink
+
 import com.snowplowanalytics.snowplow.enrich.common.adapters.{AdapterRegistry, RawEvent}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.{EnrichmentManager, EnrichmentRegistry}
 import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
 import com.snowplowanalytics.snowplow.enrich.common.utils.ConversionUtils
-import IdImplicits._
-import com.snowplowanalytics.snowplow.badrows.BadRow.{EnrichmentFailures, SchemaViolations, TrackerProtocolViolations}
 import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
+
+import com.snowplowanalytics.snowplow.badrows.BadRow.{EnrichmentFailures, SchemaViolations, TrackerProtocolViolations}
 
 /** Sink of the collector that Snowplow Micro is.
   * Contains the functions that are called for each tracking event sent
@@ -37,7 +46,11 @@ import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
   * For each event it tries to validate it using Common Enrich,
   * and then stores the results in-memory in [[ValidationCache]].
   */
-private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], enrichmentRegistry: EnrichmentRegistry[Id], outputEnrichedTsv: Boolean) extends Sink {
+private[micro] final case class MemorySink(
+  igluClient: IgluCirceClient[IO],
+  enrichmentRegistry: EnrichmentRegistry[IO],
+  outputEnrichedTsv: Boolean
+) extends Sink {
   val MaxBytes = Int.MaxValue
   private val processor = Processor(buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
   private lazy val logger = LoggerFactory.getLogger("EventLog")
@@ -69,8 +82,8 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], enri
     */
   private[micro] def processThriftBytes(
     thriftBytes: Array[Byte],
-    igluClient: IgluCirceClient[Id],
-    enrichmentRegistry: EnrichmentRegistry[Id],
+    igluClient: IgluCirceClient[IO],
+    enrichmentRegistry: EnrichmentRegistry[IO],
     processor: Processor
   ): Unit =
     ThriftLoader.toCollectorPayload(thriftBytes, processor) match {
@@ -126,11 +139,19 @@ private[micro] final case class MemorySink(igluClient: IgluCirceClient[Id], enri
     */
   private[micro] def validateEvent(
     rawEvent: RawEvent,
-    igluClient: IgluCirceClient[Id],
-    enrichmentRegistry: EnrichmentRegistry[Id],
+    igluClient: IgluCirceClient[IO],
+    enrichmentRegistry: EnrichmentRegistry[IO],
     processor: Processor
   ): Either[(List[String], BadRow), GoodEvent] =
-    EnrichmentManager.enrichEvent[Id](enrichmentRegistry, igluClient, processor, DateTime.now(), rawEvent, EtlPipeline.FeatureFlags(acceptInvalid = false, legacyEnrichmentOrder = false), ())
+    EnrichmentManager.enrichEvent[IO](
+      enrichmentRegistry,
+      igluClient,
+      processor,
+      DateTime.now(),
+      rawEvent,
+      EtlPipeline.FeatureFlags(acceptInvalid = false, legacyEnrichmentOrder = false),
+      IO.unit
+    )
       .subflatMap { enriched =>
         EventConverter.fromEnriched(enriched)
           .leftMap { failure =>

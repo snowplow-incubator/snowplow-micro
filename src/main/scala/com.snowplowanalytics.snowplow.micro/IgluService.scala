@@ -16,16 +16,18 @@ package com.snowplowanalytics.snowplow.micro
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.model.StatusCodes.NotFound
-import cats.Id
+
+import cats.effect.IO
+
 import io.circe.generic.auto._
 
 import com.snowplowanalytics.iglu.client.resolver.Resolver
+
 import com.snowplowanalytics.iglu.core.{SchemaVer, SchemaKey}
 
-import IdImplicits._
 import CirceSupport._
 
-class IgluService(resolver: Resolver[Id]) {
+class IgluService(resolver: Resolver[IO]) {
 
   def get(vendor: String, name: String, versionStr: String): Route =
     SchemaVer.parseFull(versionStr) match {
