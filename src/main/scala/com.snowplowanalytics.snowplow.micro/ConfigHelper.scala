@@ -12,33 +12,40 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
-import cats.Id
-import cats.effect.Clock
-import cats.implicits._
-import com.snowplowanalytics.iglu.client.IgluCirceClient
-import com.snowplowanalytics.iglu.client.resolver.Resolver
-import com.snowplowanalytics.iglu.client.resolver.registries.Registry
-import com.snowplowanalytics.iglu.core.circe.CirceIgluCodecs._
-import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
-import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, SinkConfig}
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.EnrichmentConf
-import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
-import com.typesafe.config.{Config, ConfigFactory}
-import io.circe.Json
-import io.circe.parser.parse
-import io.circe.syntax._
-import pureconfig.generic.auto._
-import pureconfig.generic.{FieldCoproductHint, ProductHint}
-import pureconfig.{CamelCase, ConfigFieldMapping, ConfigSource}
-
 import java.io.File
 import java.net.URI
 import java.nio.file.{Path, Paths}
 import java.security.{KeyStore, SecureRandom}
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
+
+import pureconfig.generic.auto._
+import pureconfig.generic.{FieldCoproductHint, ProductHint}
+import pureconfig.{CamelCase, ConfigFieldMapping, ConfigSource}
+
 import scala.io.Source
+
+import com.typesafe.config.{Config, ConfigFactory}
+
+import cats.effect.Clock
+import cats.implicits._
+
+import io.circe.Json
+import io.circe.parser.parse
+import io.circe.syntax._
+
+import com.snowplowanalytics.iglu.client.IgluCirceClient
+import com.snowplowanalytics.iglu.client.resolver.Resolver
+import com.snowplowanalytics.iglu.client.resolver.registries.Registry
+
+import com.snowplowanalytics.iglu.core.circe.CirceIgluCodecs._
+import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
+
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorConfig, SinkConfig}
+
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.EnrichmentConf
+import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
 
 /** Contain functions to parse the command line arguments,
   * to parse the configuration for the collector, Akka HTTP and Iglu
@@ -56,21 +63,12 @@ private[micro] object ConfigHelper {
 
   implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
 
-  // Copied from Enrich - necessary for parsing enrichment configs
-  implicit val clockProvider: Clock[Id] = new Clock[Id] {
-    final def realTime(unit: TimeUnit): Id[Long] =
-      unit.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-
-    final def monotonic(unit: TimeUnit): Id[Long] =
-      unit.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
-  }
-
   type EitherS[A] = Either[String, A]
 
   case class MicroConfig(
     collectorConfig: CollectorConfig,
-    igluResolver: Resolver[Id],
-    igluClient: IgluCirceClient[Id],
+    igluResolver: Resolver[IO],
+    igluClient: IgluCirceClient[IO],
     enrichmentConfigs: List[EnrichmentConf],
     akkaConfig: Config,
     sslContext: Option[SSLContext],
@@ -208,16 +206,16 @@ private[micro] object ConfigHelper {
   }
 
   /** Instantiate an Iglu client from its configuration file. */
-  def getIgluClientFromSource(igluConfigSource: Source, extraRegistry: Option[Registry]): Either[String, (Resolver[Id], IgluCirceClient[Id])] =
+  def getIgluClientFromSource(igluConfigSource: Source, extraRegistry: Option[Registry]): Either[String, (Resolver[IO], IgluCirceClient[IO])] =
     for {
       text <- Either.catchNonFatal(igluConfigSource.mkString).leftMap(_.getMessage)
       json <- parse(text).leftMap(_.show)
       config <- Resolver.parseConfig(json).leftMap(_.show)
-      resolver <- Resolver.fromConfig[Id](config).leftMap(_.show).value
+      resolver <- Resolver.fromConfig[IO](config).leftMap(_.show).value
       completeResolver = resolver.copy(repos = resolver.repos ++ extraRegistry)
-    } yield (completeResolver, IgluCirceClient.fromResolver[Id](completeResolver, config.cacheSize))
+    } yield (completeResolver, IgluCirceClient.fromResolver[IO](completeResolver, config.cacheSize))
 
-  def getEnrichmentRegistryFromPath(path: Path, igluClient: IgluCirceClient[Id]) = {
+  def getEnrichmentRegistryFromPath(path: Path, igluClient: IgluCirceClient[IO]) = {
     val schemaKey = SchemaKey(
       "com.snowplowanalytics.snowplow",
       "enrichments",

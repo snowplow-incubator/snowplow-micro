@@ -12,65 +12,77 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
+import java.io.File
+
+import scala.sys.process._
+
+import org.slf4j.LoggerFactory
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.{ConnectionContext, Http}
-import cats.Id
+
+import cats.implicits._
+
+import cats.effect.{Blocker, ContextShift, ExitCode, IO, IOApp, Sync}
+
 import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorSinks
+
+import com.snowplowanalytics.forex.ZonedClock
+
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf}
 import com.snowplowanalytics.snowplow.enrich.common.utils.BlockerF
-import com.snowplowanalytics.snowplow.micro.ConfigHelper.MicroConfig
-import org.slf4j.LoggerFactory
 
-import java.io.File
-import scala.sys.process._
+import com.snowplowanalytics.snowplow.micro.ConfigHelper.MicroConfig
 
 /** Read the configuration and instantiate Snowplow Micro,
   * which acts as a `Collector` and has an in-memory sink
   * holding the valid and invalid events.
   * It offers an HTTP endpoint to query this sink.
   */
-object Main {
+object Main extends IOApp {
   lazy val logger = LoggerFactory.getLogger(getClass())
 
-  def main(args: Array[String]): Unit = {
-    val config = ConfigHelper.parseConfig(args)
+  def run(args: List[String]): IO[ExitCode] = {
+    val config = ConfigHelper.parseConfig(args.toArray)
     run(config)
   }
 
-  def setupEnrichments(configs: List[EnrichmentConf]): EnrichmentRegistry[Id] = {
-    configs.flatMap(_.filesToCache).foreach { case (uri, location) =>
-      logger.info(s"Downloading ${uri}...")
-      uri.toURL #> new File(location) !!
-    }
+  def setupEnrichments(
+    blocker: Blocker,
+    configs: List[EnrichmentConf]
+  ): IO[EnrichmentRegistry[IO]] = {
+    val maybeRegistry = for {
+      registry <- EnrichmentRegistry.build[IO](configs, BlockerF.ofBlocker[IO](blocker))
+      _ <- configs.flatMap(_.filesToCache).traverse_ { case (uri, location) =>
+             IO(logger.info(s"Downloading ${uri}...")) >>
+               blocker.blockOn(IO(uri.toURL #> new File(location) !!))
+           }
+      enabledEnrichments = registry.productIterator.toList.collect {
+        case Some(e: Enrichment) => e.getClass.getSimpleName
+      }
+      ///_ <- log
+    } yield registry
 
-    val enrichmentRegistry = EnrichmentRegistry.build[Id](configs, BlockerF.noop).value match {
-      case Right(ok) => ok
-      case Left(e) =>
-        throw new IllegalArgumentException(s"Error while enabling enrichments: $e.")
-    }
 
-    val loadedEnrichments = enrichmentRegistry.productIterator.toList.collect {
-      case Some(e: Enrichment) => e.getClass.getSimpleName
-    }
-    if (loadedEnrichments.nonEmpty) {
-      logger.info(s"Enabled enrichments: ${loadedEnrichments.mkString(", ")}")
-    } else {
-      logger.info(s"No enrichments enabled.")
-    }
+    //if (loadedEnrichments.nonEmpty) {
+    //  logger.info(s"Enabled enrichments: ${loadedEnrichments.mkString(", ")}")
+    //} else {
+    //  logger.info(s"No enrichments enabled.")
+    //}
 
-    enrichmentRegistry
+    maybeRegistry
   }
 
   /** Create the in-memory sink,
     * get the endpoints for both the collector and to query Snowplow Micro,
     * and start the HTTP server.
     */
-  def run(config: MicroConfig): Unit = {
+  def run(config: MicroConfig): IO[ExitCode] = Blocker[IO].use { blocker =>
     implicit val system = ActorSystem.create("snowplow-micro", config.akkaConfig)
     implicit val executionContext = system.dispatcher
 
-    val enrichmentRegistry = setupEnrichments(config.enrichmentConfigs)
+    val enrichmentRegistry = setupEnrichments[IO](blocker, config.enrichmentConfigs)
     val sinks = CollectorSinks(
       MemorySink(config.igluClient, enrichmentRegistry, config.outputEnrichedTsv),
       MemorySink(config.igluClient, enrichmentRegistry, config.outputEnrichedTsv)
@@ -79,21 +91,26 @@ object Main {
 
     val routes = Routing.getMicroRoutes(config.collectorConfig, sinks, igluService)
 
-    Http()
-      .newServerAt(config.collectorConfig.interface, config.collectorConfig.port)
-      .bind(routes)
-      .foreach { binding =>
-        logger.info(s"REST interface bound to ${binding.localAddress}")
-      }
-
-    config.sslContext.foreach { sslContext =>
+    val http = IO(
       Http()
-        .newServerAt(config.collectorConfig.interface, config.collectorConfig.ssl.port)
-        .enableHttps(ConnectionContext.httpsServer(sslContext))
+        .newServerAt(config.collectorConfig.interface, config.collectorConfig.port)
         .bind(routes)
         .foreach { binding =>
-          logger.info(s"HTTPS REST interface bound to ${binding.localAddress}")
+          logger.info(s"REST interface bound to ${binding.localAddress}")
         }
-    }
-  }
+    )
+
+    val https = IO(
+      config.sslContext.foreach { sslContext =>
+        Http()
+          .newServerAt(config.collectorConfig.interface, config.collectorConfig.ssl.port)
+          .enableHttps(ConnectionContext.httpsServer(sslContext))
+          .bind(routes)
+          .foreach { binding =>
+            logger.info(s"HTTPS REST interface bound to ${binding.localAddress}")
+          }
+      }
+    )
+
+  }.as(ExitCode.Success)
 }
