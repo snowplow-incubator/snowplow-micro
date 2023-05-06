@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-2023 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
  * and you may not use this file except in compliance with the Apache License Version 2.0.
@@ -12,18 +12,25 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.{ConnectionContext, Http}
-import cats.Id
-import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorSinks
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf}
-import com.snowplowanalytics.snowplow.enrich.common.utils.BlockerF
-import com.snowplowanalytics.snowplow.micro.ConfigHelper.MicroConfig
+import java.io.File
+
 import org.slf4j.LoggerFactory
 
-import java.io.File
 import scala.sys.process._
+
+import akka.actor.ActorSystem
+import akka.http.scaladsl.{ConnectionContext, Http}
+
+import cats.Id
+
+import com.snowplowanalytics.snowplow.collectors.scalastream.model.CollectorSinks
+
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf}
+import com.snowplowanalytics.snowplow.enrich.common.utils.{BlockerF, ShiftExecution}
+
+import com.snowplowanalytics.snowplow.micro.ConfigHelper.MicroConfig
+import com.snowplowanalytics.snowplow.micro.utils._
 
 /** Read the configuration and instantiate Snowplow Micro,
   * which acts as a `Collector` and has an in-memory sink
@@ -44,7 +51,7 @@ object Main {
       uri.toURL #> new File(location) !!
     }
 
-    val enrichmentRegistry = EnrichmentRegistry.build[Id](configs, BlockerF.noop).value match {
+    val enrichmentRegistry = EnrichmentRegistry.build[Id](configs, BlockerF.noop, ShiftExecution.noop).value match {
       case Right(ok) => ok
       case Left(e) =>
         throw new IllegalArgumentException(s"Error while enabling enrichments: $e.")
