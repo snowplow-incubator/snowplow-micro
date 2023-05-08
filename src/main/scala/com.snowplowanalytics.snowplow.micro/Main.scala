@@ -30,7 +30,7 @@ import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrich
 import com.snowplowanalytics.snowplow.enrich.common.utils.{BlockerF, ShiftExecution}
 
 import com.snowplowanalytics.snowplow.micro.ConfigHelper.MicroConfig
-import com.snowplowanalytics.snowplow.micro.utils._
+import com.snowplowanalytics.snowplow.micro.IdImplicits._
 
 /** Read the configuration and instantiate Snowplow Micro,
   * which acts as a `Collector` and has an in-memory sink

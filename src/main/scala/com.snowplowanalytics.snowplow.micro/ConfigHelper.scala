@@ -13,7 +13,6 @@
 package com.snowplowanalytics.snowplow.micro
 
 import cats.Id
-import cats.effect.Clock
 import cats.implicits._
 import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
@@ -24,6 +23,7 @@ import com.snowplowanalytics.snowplow.collectors.scalastream.model.{CollectorCon
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.EnrichmentConf
 import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
+import com.snowplowanalytics.snowplow.micro.IdImplicits._
 import com.typesafe.config.{Config, ConfigFactory}
 import io.circe.Json
 import io.circe.parser.parse
@@ -36,7 +36,6 @@ import java.io.File
 import java.net.URI
 import java.nio.file.{Path, Paths}
 import java.security.{KeyStore, SecureRandom}
-import java.util.concurrent.TimeUnit
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 import scala.io.Source
 
@@ -54,17 +53,8 @@ private[micro] object ConfigHelper {
   implicit def hint[T] =
     ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 
-  implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
-
   // Copied from Enrich - necessary for parsing enrichment configs
-  implicit val clockProvider: Clock[Id] = new Clock[Id] {
-    final def realTime(unit: TimeUnit): Id[Long] =
-      unit.convert(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-
-    final def monotonic(unit: TimeUnit): Id[Long] =
-      unit.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
-  }
-
+  implicit val sinkConfigHint = new FieldCoproductHint[SinkConfig]("enabled")
   type EitherS[A] = Either[String, A]
 
   case class MicroConfig(
