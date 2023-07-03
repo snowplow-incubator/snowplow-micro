@@ -1,3 +1,7 @@
+Version 1.7.2 (2023-07-03)
+--------------------------
+Add a mirror for Iglu Central
+
 Version 1.7.1 (2023-05-08)
 --------------------------
 Bump enrich to 3.8.0 (#138)
