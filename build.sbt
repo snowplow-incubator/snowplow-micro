@@ -19,6 +19,7 @@ lazy val buildSettings = Seq(
     baseDirectory.value / "config",
     baseDirectory.value / "ui" / "out"
   ),
+  Compile / unmanagedResources += file("LICENSE.md"),
   resolvers ++= Dependencies.resolvers
 )
 
@@ -62,7 +63,8 @@ lazy val dockerCommon = Seq(
   Docker / defaultLinuxInstallLocation := "/opt/snowplow",
   Docker / daemonUserUid := None,
   dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
-  dockerRepository := Some("snowplow")
+  dockerRepository := Some("snowplow"),
+  Universal / mappings += file("LICENSE.md") -> "LICENSE.md"
 )
 
 lazy val microSettingsDistroless = dockerCommon ++ Seq(
