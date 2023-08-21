@@ -32,16 +32,9 @@ sbt test
 
 ## Copyright and License
 
-Snowplow Micro is copyright 2019-2023 Snowplow Analytics Ltd.
+Copyright (c) 2019-present Snowplow Analytics Ltd. All rights reserved.
 
-Licensed under the **[Apache License, Version 2.0][license]** (the "License");
-you may not use this software except in compliance with the License.
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Licensed under the [Snowplow Community License](https://docs.snowplow.io/community-license-1.0). _(If you are uncertain how it applies to your use case, check our answers to [frequently asked questions](https://docs.snowplow.io/docs/contributing/community-license-faq/).)_
 
 [docker-micro]: https://hub.docker.com/r/snowplow/snowplow-micro
 [docker-image]: https://img.shields.io/docker/v/snowplow/snowplow-micro?sort=semver
@@ -52,8 +45,8 @@ limitations under the License.
 [gh-actions-image]: https://github.com/snowplow-incubator/snowplow-micro/actions/workflows/test.yml/badge.svg?branch=master
 [gh-releases]: https://github.com/snowplow-incubator/snowplow-micro/releases
 
-[license]: https://www.apache.org/licenses/LICENSE-2.0
-[license-image]: https://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
+[license]: https://docs.snowplow.io/docs/contributing/community-license-faq/
+[license-image]: https://img.shields.io/badge/license-Snowplow--Community-blue.svg?style=flat
 
 [snowplow]: https://github.com/snowplow/snowplow
 [discourse]: https://discourse.snowplow.io
