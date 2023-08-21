@@ -1,2 +1,5 @@
 target/
 config/
+.DS_Store
+.bsp/
+.idea/

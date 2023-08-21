@@ -47,7 +47,9 @@ private[micro] object Routing {
   )(implicit ec: ExecutionContext): Route = {
     val c = new CollectorService(collectorConf, collectorSinks, buildinfo.BuildInfo.name, buildinfo.BuildInfo.version)
 
-    val health = new HealthService.Settable
+    val health = new HealthService.Settable {
+      toHealthy()
+    }
     val collectorRoutes = new CollectorRoute {
       override def collectorService = c
       override def healthService    = health
@@ -67,6 +69,12 @@ private[micro] object Routing {
             complete(ValidationCache.filterGood(FiltersGood(None, None, None, None)))
           } ~ path("bad") {
             complete(ValidationCache.filterBad(FiltersBad(None, None, None)))
+          } ~ pathPrefix("ui") {
+            pathEndOrSingleSlash {
+              getFromResource("ui/index.html")
+            } ~ path("errors") {
+              getFromResource("ui/errors.html")
+            } ~ getFromResourceDirectory("ui") ~ getFromResource("ui/404.html")
           }
         } ~ post {
           path("good") {

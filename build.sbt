@@ -5,6 +5,7 @@
   *
   * Copyright (c) 2019-2022 Snowplow Analytics Ltd. All rights reserved.
   */
+import com.typesafe.sbt.packager.MappingsHelper.directory
 import com.typesafe.sbt.packager.docker._
 
 lazy val buildSettings = Seq(    
@@ -14,7 +15,10 @@ lazy val buildSettings = Seq(
   scalaVersion := "2.12.14",
   scalacOptions := Settings.compilerOptions,
   javacOptions := Settings.javaCompilerOptions,
-  Runtime / unmanagedClasspath += baseDirectory.value / "config",
+  Runtime / unmanagedClasspath ++= Seq(
+    baseDirectory.value / "config",
+    baseDirectory.value / "ui" / "out"
+  ),
   resolvers ++= Dependencies.resolvers
 )
 
@@ -58,9 +62,7 @@ lazy val dockerCommon = Seq(
   Docker / defaultLinuxInstallLocation := "/opt/snowplow",
   Docker / daemonUserUid := None,
   dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
-  dockerRepository := Some("snowplow"),
-  scriptClasspath += "/config",
-  Universal / javaOptions ++= Seq("-Dnashorn.args=--language=es6")
+  dockerRepository := Some("snowplow")
 )
 
 lazy val microSettingsDistroless = dockerCommon ++ Seq(
@@ -71,15 +73,23 @@ lazy val microSettingsDistroless = dockerCommon ++ Seq(
     "java",
     "-Dnashorn.args=--language=es6",
     "-cp",
-    s"/opt/snowplow/lib/${(packageJavaClasspathJar / artifactPath).value.getName}:/config",
+    s"/opt/snowplow/lib/${(packageJavaClasspathJar / artifactPath).value.getName}:/opt/snowplow/ui:/config",
     "com.snowplowanalytics.snowplow.micro.Main"
   ),
+  Universal / mappings ++= directory((micro / baseDirectory).value / "ui" / "out").map {
+    case (source, destination) => (source, destination.replaceFirst("^out/", "ui/"))
+  },
   sourceDirectory := (micro / sourceDirectory).value
 )
 
 lazy val microSettings = dockerCommon ++ Seq(
   dockerBaseImage := "eclipse-temurin:11",
   Docker / daemonUser := "daemon",
+  scriptClasspath ++= Seq("/opt/snowplow/ui", "/config"),
+  Universal / javaOptions ++= Seq("-Dnashorn.args=--language=es6"),
+  Universal / mappings ++= directory(baseDirectory.value / "ui" / "out").map {
+    case (source, destination) => (source, destination.replaceFirst("^out/", "ui/"))
+  }
 )
 
 lazy val micro = project

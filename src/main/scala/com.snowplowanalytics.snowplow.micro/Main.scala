@@ -63,7 +63,7 @@ object Main {
     if (loadedEnrichments.nonEmpty) {
       logger.info(s"Enabled enrichments: ${loadedEnrichments.mkString(", ")}")
     } else {
-      logger.info(s"No enrichments enabled.")
+      logger.info(s"No enrichments enabled")
     }
 
     enrichmentRegistry
@@ -85,6 +85,7 @@ object Main {
     val igluService = new IgluService(config.igluResolver)
 
     val routes = Routing.getMicroRoutes(config.collectorConfig, sinks, igluService)
+    logger.info("UI available at /micro/ui")
 
     Http()
       .newServerAt(config.collectorConfig.interface, config.collectorConfig.port)
