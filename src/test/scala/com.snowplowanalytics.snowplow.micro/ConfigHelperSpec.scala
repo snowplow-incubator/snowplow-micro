@@ -12,12 +12,33 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
+import cats.effect.IO
+import cats.effect.testing.specs2.CatsEffect
+import com.monovore.decline.Command
+import com.snowplowanalytics.snowplow.micro.Configuration.MicroConfig
 import org.specs2.mutable.Specification
 
-class ConfigHelperSpec extends Specification {
-  "ConfigHelper" >> {
-    "will produce a valid parsed collector config if `--collector-config` is not present" >> {
-      ConfigHelper.parseConfig(Array()) must not(throwA[Exception])
+class ConfigHelperSpec extends Specification with CatsEffect {
+  "Configuration loader should work when" >> {
+    "no custom args are provided and only defaults are used" >> {
+      load(args = List.empty)
+        .map { result =>
+          result must beRight[MicroConfig].like {
+            case config =>
+              config.collector.port must beEqualTo(9090)
+              config.collector.ssl.enable must beFalse 
+              config.collector.ssl.port must beEqualTo(9543) 
+              
+              config.enrichmentsConfig.isEmpty must beTrue
+              config.iglu.resolver.repos.map(_.config.name) must containTheSameElementsAs(List("Iglu Central", "Iglu Central - Mirror 01"))
+              
+              config.outputEnrichedTsv must beFalse
+          }
+        }
     }
+  }
+
+  private def load(args: List[String]): IO[Either[String, MicroConfig]] = {
+    Command("test-app", "test")(Configuration.load()).parse(args).right.get.value
   }
 }

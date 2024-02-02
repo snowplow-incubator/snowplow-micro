@@ -16,33 +16,36 @@ object Dependencies {
 
   object V {
     // Snowplow
-    val snowplowStreamCollector = "2.8.1"
-    val snowplowCommonEnrich    = "3.8.0"
+    val snowplowStreamCollector = "3.2.0"
+    val snowplowCommonEnrich    = "4.2.0"
+    val http4sCirce             = "0.23.23"
 
+    val decline          = "2.4.1"
+    
     // circe
     val circe = "0.14.2"
 
     // specs2
     val specs2        = "4.12.2"
+    val specs2CE      = "1.5.0"
 
     // force versions of transitive dependencies
     val badRows   = "2.2.0"
   }
 
-  val exclusions = Seq(
-    "org.apache.tomcat.embed" % "tomcat-embed-core"
-  )
-
-  // Snowplow stream collector
-  val snowplowStreamCollector = "com.snowplowanalytics" %% "snowplow-stream-collector-core" % V.snowplowStreamCollector
-  val snowplowCommonEnrich    = "com.snowplowanalytics" %% "snowplow-common-enrich"         % V.snowplowCommonEnrich
+  val snowplowStreamCollector = "com.snowplowanalytics" %% "snowplow-stream-collector-http4s-core" % V.snowplowStreamCollector 
+  val snowplowCommonEnrich    = "com.snowplowanalytics" %% "snowplow-common-enrich"                % V.snowplowCommonEnrich 
+  
+  val http4sCirce = "org.http4s"    %% "http4s-circe"   % V.http4sCirce 
+  val decline     = "com.monovore"  %% "decline-effect" % V.decline
 
   // circe
   val circeJawn    = "io.circe" %% "circe-jawn"    % V.circe
   val circeGeneric = "io.circe" %% "circe-generic" % V.circe
 
   // specs2
-  val specs2       = "org.specs2"    %% "specs2-core"   % V.specs2       % Test
+  val specs2       = "org.specs2"     %% "specs2-core"                % V.specs2    % Test
+  val specs2CE     = "org.typelevel"  %% "cats-effect-testing-specs2" % V.specs2CE  % Test
 
   // transitive
   val badRows          = "com.snowplowanalytics"           %% "snowplow-badrows"        % V.badRows
