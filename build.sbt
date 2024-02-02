@@ -6,7 +6,9 @@
   * Copyright (c) 2019-2022 Snowplow Analytics Ltd. All rights reserved.
   */
 import com.typesafe.sbt.packager.MappingsHelper.directory
-import com.typesafe.sbt.packager.docker._
+import com.typesafe.sbt.packager.docker.*
+
+import scala.collection.Seq
 
 lazy val buildSettings = Seq(    
   name := "snowplow-micro",
@@ -27,21 +29,22 @@ lazy val dependencies = Seq(
   libraryDependencies ++= Seq(
     Dependencies.snowplowStreamCollector,
     Dependencies.snowplowCommonEnrich,
+    Dependencies.decline,
+    Dependencies.http4sCirce,
     Dependencies.circeJawn,
     Dependencies.circeGeneric,
     Dependencies.specs2,
+    Dependencies.specs2CE,
     Dependencies.badRows
   )
 )
 
-lazy val exclusions = Seq(
-  excludeDependencies ++= Dependencies.exclusions
+lazy val buildInfoSettings = Seq(
+  buildInfoKeys := Seq[BuildInfoKey](name, moduleName, dockerAlias, version, "shortName" -> "micro-ssc"),
+  buildInfoPackage := "com.snowplowanalytics.snowplow.micro",
+  buildInfoOptions += BuildInfoOption.Traits("com.snowplowanalytics.snowplow.collector.core.AppInfo")
 )
 
-lazy val buildInfoSettings = Seq(
-  buildInfoKeys := Seq[BuildInfoKey](organization, name, version, scalaVersion),
-  buildInfoPackage := "buildinfo"
-)
 
 lazy val dynVerSettings = Seq(
   ThisBuild / dynverVTagPrefix := false, // Otherwise git tags required to have v-prefix
@@ -50,7 +53,6 @@ lazy val dynVerSettings = Seq(
 
 lazy val commonSettings = 
   dependencies ++
-  exclusions ++
   buildSettings ++
   buildInfoSettings ++
   dynVerSettings ++

@@ -12,12 +12,16 @@
  */
 package com.snowplowanalytics.snowplow.micro
 
+import cats.effect.testing.specs2.CatsEffect
 import org.specs2.mutable.Specification
 
-class ConfigHelperSpec extends Specification {
+class ConfigHelperSpec extends Specification with CatsEffect {
   "ConfigHelper" >> {
     "will produce a valid parsed collector config if `--collector-config` is not present" >> {
-      ConfigHelper.parseConfig(Array()) must not(throwA[Exception])
+     Configuration.loadCollectorConfig(None).value.map {
+       case Right(_) => ok
+       case Left(_) => ko
+     }
     }
   }
 }

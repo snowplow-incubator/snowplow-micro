@@ -39,7 +39,7 @@ object ValueConverter {
     ofFunc(_ => f(_).asRight)
 
   implicit def valueDecoderCase[A](implicit decoder: ValueDecoder[A]): Aux[Option[String], A] =
-    ofFunc(key => x => decoder.parse(key, x.getOrElse("")))
+    ofFunc(key => x => decoder.parse(key, x.getOrElse(""), None))
 
   implicit def floatDoubleCase: Aux[Option[Float], Option[Double]] =
     simple(_.map(_.toDouble))
