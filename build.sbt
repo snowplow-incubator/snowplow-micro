@@ -34,6 +34,19 @@ lazy val dependencies = Seq(
   )
 )
 
+lazy val dependenciesHttp4s = Seq(
+  libraryDependencies ++= Seq(
+    Dependencies.Http4s.snowplowStreamCollector,
+    Dependencies.Http4s.snowplowCommonEnrich,
+    Dependencies.Http4s.decline,
+    Dependencies.Http4s.analyticsSdk,
+    Dependencies.circeJawn,
+    Dependencies.circeGeneric,
+    Dependencies.specs2,
+    Dependencies.badRows
+  )
+)
+
 lazy val exclusions = Seq(
   excludeDependencies ++= Dependencies.exclusions
 )
@@ -51,6 +64,14 @@ lazy val dynVerSettings = Seq(
 lazy val commonSettings = 
   dependencies ++
   exclusions ++
+  buildSettings ++
+  buildInfoSettings ++
+  dynVerSettings ++
+  Settings.dynverOptions ++
+  Settings.assemblyOptions
+  
+lazy val commonSettingsHttp4s = 
+  dependenciesHttp4s ++
   buildSettings ++
   buildInfoSettings ++
   dynVerSettings ++
@@ -97,6 +118,11 @@ lazy val microSettings = dockerCommon ++ Seq(
 lazy val micro = project
   .in(file("."))
   .settings(commonSettings ++ microSettings)
+  .enablePlugins(BuildInfoPlugin, DockerPlugin, JavaAppPackaging)
+  
+lazy val microHttp4s = project
+  .in(file("http4s"))
+  .settings(commonSettingsHttp4s ++ microSettings)
   .enablePlugins(BuildInfoPlugin, DockerPlugin, JavaAppPackaging)
   
 lazy val microDistroless = project
