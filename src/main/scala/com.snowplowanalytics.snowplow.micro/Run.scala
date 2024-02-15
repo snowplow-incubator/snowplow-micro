@@ -11,7 +11,7 @@
 package com.snowplowanalytics.snowplow.micro
 
 import cats.data.EitherT
-import cats.effect.{ExitCode, IO, Resource}
+import cats.effect.{ExitCode, IO, Resource, Sync}
 import cats.implicits._
 import com.monovore.decline.Opts
 import com.snowplowanalytics.iglu.client.resolver.registries.JavaNetRegistryLookup
@@ -41,6 +41,7 @@ object Run {
     Configuration.load().map { configuration =>
       handleAppErrors {
         configuration
+          .flatTap(config => checkLicense(config.collector.license.accept))
           .semiflatMap { validMicroConfig =>
             buildEnvironment(validMicroConfig)
               .use(_ => IO.never)
@@ -135,7 +136,19 @@ object Run {
         logger.info(s"Downloading $uri...") *> IO(uri.toURL #> new File(location) !!)
       }
   }
-
+  
+  private def checkLicense(acceptLicense: Boolean): EitherT[IO, String, Unit] =
+    EitherT.liftF {
+      if (acceptLicense)
+       IO.unit 
+      else
+        IO.raiseError(
+          new IllegalStateException(
+            "Please accept the terms of the Snowplow Limited Use License Agreement to proceed. See https://docs.snowplow.io/docs/pipeline-components-and-applications/stream-collector/configure/#license for more information on the license and how to configure this."
+          )
+        )
+    }
+  
   private def handleAppErrors(appOutput: EitherT[IO, String, ExitCode]): IO[ExitCode] = {
     appOutput
       .leftSemiflatMap { error =>
