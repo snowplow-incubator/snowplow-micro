@@ -23,7 +23,7 @@ import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData
 import com.snowplowanalytics.snowplow.collector.core.{Config => CollectorConfig}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.EnrichmentConf
-import com.typesafe.config.{ConfigFactory, Config => TypesafeConfig}
+import com.typesafe.config.{ConfigFactory, ConfigParseOptions, Config => TypesafeConfig}
 import fs2.io.file.{Files, Path => FS2Path}
 import io.circe.config.syntax.CirceConfigOps
 import io.circe.syntax.EncoderOps
@@ -195,7 +195,9 @@ object Configuration {
 
   private def handleInputPath(path: Option[Path]): TypesafeConfig = {
     path match {
-      case Some(definedPath) => ConfigFactory.parseFile(definedPath.toFile)
+      case Some(definedPath) => 
+        //Fail when provided file doesn't exist
+        ConfigFactory.parseFile(definedPath.toFile, ConfigParseOptions.defaults().setAllowMissing(false))
       case None => ConfigFactory.empty()
     }
   }
