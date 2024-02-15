@@ -22,7 +22,8 @@ lazy val buildSettings = Seq(
     baseDirectory.value / "ui" / "out"
   ),
   Compile / unmanagedResources += file("LICENSE.md"),
-  resolvers ++= Dependencies.resolvers
+  resolvers ++= Dependencies.resolvers,
+  Test / parallelExecution := false
 )
 
 lazy val dependencies = Seq(

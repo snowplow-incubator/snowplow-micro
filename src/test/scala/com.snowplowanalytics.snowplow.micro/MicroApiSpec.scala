@@ -11,18 +11,18 @@ import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
 import org.http4s.client.Client
 import org.http4s.implicits.http4sLiteralsSyntax
 import org.specs2.mutable.Specification
-import org.specs2.specification.AfterEach
+import org.specs2.specification.BeforeAfterEach
 
 import scala.concurrent.duration.{Duration, DurationInt}
 
-class MicroApiSpec extends Specification with CatsEffect with AfterEach {
+class MicroApiSpec extends Specification with CatsEffect with BeforeAfterEach {
   sequential
 
-  override protected val Timeout: Duration = 100.seconds
+  override protected val Timeout: Duration = 1.minute 
 
-  override protected def after: Unit = {
-    ValidationCache.reset()
-  }
+  override protected def before: Unit = ValidationCache.reset()
+
+  override protected def after: Unit = ValidationCache.reset()
 
   "Micro should accept good data" in {
     setup().use { client =>
@@ -75,13 +75,11 @@ class MicroApiSpec extends Specification with CatsEffect with AfterEach {
     }
   }
 
-
   private def setup(): Resource[IO, Client[IO]] = {
     for {
       _ <- Main.run(List.empty).background
       client <- BlazeClientBuilder.apply[IO].resource
       _ <- Resource.sleep[IO](1.seconds)
     } yield client
-
   }
 }
