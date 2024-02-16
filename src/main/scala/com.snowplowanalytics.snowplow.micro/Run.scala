@@ -22,7 +22,6 @@ import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegist
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf}
 import com.snowplowanalytics.snowplow.enrich.common.utils.{HttpClient, ShiftExecution}
 import com.snowplowanalytics.snowplow.micro.Configuration.MicroConfig
-import org.http4s.HttpRoutes
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
@@ -53,7 +52,7 @@ object Run {
 
   private def buildEnvironment(config: MicroConfig): Resource[IO, Unit] = {
     for {
-      customSslContext <- Resource.eval(setupSSLContext())
+      sslContext <- Resource.eval(setupSSLContext())
       enrichmentRegistry <- buildEnrichmentRegistry(config.enrichmentsConfig)
       badProcessor = Processor(BuildInfo.name, BuildInfo.version)
       adapterRegistry = MicroAdapterRegistry.create()
@@ -73,16 +72,7 @@ object Run {
 
       miniRoutes = new Routing(config.iglu.resolver)(lookup).value
       allRoutes = miniRoutes <+> collectorRoutes
-      _ <- MicroHttpServer.build(
-        allRoutes,
-        config.collector.port,
-        secure = false,
-        customSslContext = None,
-        config.collector.hsts,
-        config.collector.networking,
-        config.collector.monitoring.metrics
-      )
-      _ <- runHttpsServerIfEnabled(config, customSslContext, allRoutes) 
+      _ <- MicroHttpServer.build(allRoutes, config, sslContext)
     } yield ()
   }
 
@@ -136,24 +126,6 @@ object Run {
       .traverse_ { case (uri, location) =>
         logger.info(s"Downloading $uri...") *> IO(uri.toURL #> new File(location) !!)
       }
-  }
-
-  private def runHttpsServerIfEnabled(config: MicroConfig,
-                                      customSslContext: Option[SSLContext],
-                                      routes: HttpRoutes[IO]): Resource[IO, Unit] = {
-    if (config.collector.ssl.enable) {
-      MicroHttpServer.build(
-        routes,
-        config.collector.ssl.port,
-        secure = true,
-        customSslContext,
-        config.collector.hsts,
-        config.collector.networking,
-        config.collector.monitoring.metrics
-      ).void
-    } else {
-      Resource.unit
-    }
   }
 
   private def handleAppErrors(appOutput: EitherT[IO, String, ExitCode]): IO[ExitCode] = {

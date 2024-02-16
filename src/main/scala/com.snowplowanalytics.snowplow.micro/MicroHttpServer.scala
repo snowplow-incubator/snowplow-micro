@@ -1,11 +1,11 @@
 package com.snowplowanalytics.snowplow.micro
 
 import cats.effect.{IO, Resource}
-import cats.implicits._
 import com.avast.datadog4s.api.Tag
 import com.avast.datadog4s.extension.http4s.DatadogMetricsOps
 import com.avast.datadog4s.{StatsDMetricFactory, StatsDMetricFactoryConfig}
 import com.snowplowanalytics.snowplow.collector.core.{Config => CollectorConfig}
+import com.snowplowanalytics.snowplow.micro.Configuration.MicroConfig
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.headers.`Strict-Transport-Security`
 import org.http4s.server.Server
@@ -18,28 +18,41 @@ import java.net.InetSocketAddress
 import javax.net.ssl.SSLContext
 
 
-/** The same http server builder as in collector but with option to customize SSLContext */
+/** Similar to HTTP server builder as in collector but with option to customize SSLContext */
 object MicroHttpServer {
 
   implicit private def logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
   def build(routes: HttpRoutes[IO],
-            port: Int,
-            secure: Boolean,
-            customSslContext: Option[SSLContext],
-            hsts: CollectorConfig.HSTS,
-            networking: CollectorConfig.Networking,
-            metricsCollectorConfig: CollectorConfig.Metrics
-           ): Resource[IO, Server] =
+            config: MicroConfig,
+            sslContext: Option[SSLContext]): Resource[IO, Unit] =
     for {
-      withMetricsMiddleware <- createMetricsMiddleware(routes, metricsCollectorConfig)
-      server <- buildBlazeServer(withMetricsMiddleware, port, secure, customSslContext, hsts, networking)
-    } yield server
+      withMetricsMiddleware <- createMetricsMiddleware(routes, config.collector.monitoring.metrics)
+      _ <- Resource.eval(Logger[IO].info("Building blaze server"))
+      _ <- buildHTTPServer(withMetricsMiddleware, config)
+      _ <- sslContext.map(definedSSL => buildHTTPSServer(withMetricsMiddleware, config, definedSSL)).getOrElse(Resource.unit[IO])
+    } yield ()
 
-  private def createMetricsMiddleware(
-                                       routes: HttpRoutes[IO],
-                                       metricsCollectorConfig: CollectorConfig.Metrics
-                                     ): Resource[IO, HttpRoutes[IO]] =
+  private def buildHTTPServer(routes: HttpRoutes[IO], config: MicroConfig): Resource[IO, Server] =
+    builder(routes, config)
+      .bindSocketAddress(new InetSocketAddress(config.collector.port))
+      .resource
+
+  private def buildHTTPSServer(routes: HttpRoutes[IO], config: MicroConfig, sslContext: SSLContext): Resource[IO, Server] =
+    builder(routes, config)
+      .bindSocketAddress(new InetSocketAddress(config.collector.ssl.port))
+      .withSslContext(sslContext)
+      .resource
+
+  private def builder(routes: HttpRoutes[IO], config: MicroConfig): BlazeServerBuilder[IO] = {
+    BlazeServerBuilder[IO]
+      .withHttpApp(hstsMiddleware(config.collector.hsts, routes.orNotFound))
+      .withIdleTimeout(config.collector.networking.idleTimeout)
+      .withMaxConnections(config.collector.networking.maxConnections)
+  }
+
+  private def createMetricsMiddleware(routes: HttpRoutes[IO],
+                                      metricsCollectorConfig: CollectorConfig.Metrics): Resource[IO, HttpRoutes[IO]] =
     if (metricsCollectorConfig.statsd.enabled) {
       val metricsFactory = StatsDMetricFactory.make[IO](createStatsdCollectorConfig(metricsCollectorConfig))
       metricsFactory.evalMap(DatadogMetricsOps.builder[IO](_).useDistributionBasedTimers().build()).map { metricsOps =>
@@ -59,25 +72,4 @@ object MicroHttpServer {
     if (hsts.enable)
       HSTS(routes, `Strict-Transport-Security`.unsafeFromDuration(hsts.maxAge))
     else routes
-
-  private def buildBlazeServer(routes: HttpRoutes[IO],
-                               port: Int,
-                               secure: Boolean,
-                               customSslContext: Option[SSLContext],
-                               hsts: CollectorConfig.HSTS,
-                               networking: CollectorConfig.Networking
-                              ): Resource[IO, Server] =
-    Resource.eval(Logger[IO].info("Building blaze server")) >>
-      BlazeServerBuilder[IO]
-        .bindSocketAddress(new InetSocketAddress(port))
-        .withHttpApp(hstsMiddleware(hsts, routes.orNotFound))
-        .withIdleTimeout(networking.idleTimeout)
-        .withMaxConnections(networking.maxConnections)
-        .cond(secure, _.withSslContext(customSslContext.getOrElse(SSLContext.getDefault)))
-        .resource
-
-  implicit class ConditionalAction[A](item: A) {
-    def cond(cond: Boolean, action: A => A): A =
-      if (cond) action(item) else item
-  }
 }
