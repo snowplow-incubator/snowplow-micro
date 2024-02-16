@@ -57,6 +57,7 @@ lazy val commonSettings =
   buildSettings ++
   buildInfoSettings ++
   dynVerSettings ++
+  Settings.licenseSettings ++
   Settings.dynverOptions ++
   Settings.assemblyOptions
 
@@ -67,7 +68,7 @@ lazy val dockerCommon = Seq(
   Docker / daemonUserUid := None,
   dockerPermissionStrategy := DockerPermissionStrategy.CopyChown,
   dockerRepository := Some("snowplow"),
-  Universal / mappings += file("LICENSE.md") -> "LICENSE.md"
+  Universal / mappings += file("LICENSE.md") -> "/SNOWPLOW-LICENSE.md"
 )
 
 lazy val microSettingsDistroless = dockerCommon ++ Seq(
