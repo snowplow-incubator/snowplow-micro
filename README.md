@@ -34,7 +34,7 @@ sbt test
 
 Copyright (c) 2019-present Snowplow Analytics Ltd. All rights reserved.
 
-Licensed under the [Snowplow Community License](https://docs.snowplow.io/community-license-1.0). _(If you are uncertain how it applies to your use case, check our answers to [frequently asked questions](https://docs.snowplow.io/docs/contributing/community-license-faq/).)_
+Licensed under the [Snowplow Limited Use License Agreement][license]. _(If you are uncertain how it applies to your use case, check our answers to [frequently asked questions][faq].)_
 
 [docker-micro]: https://hub.docker.com/r/snowplow/snowplow-micro
 [docker-image]: https://img.shields.io/docker/v/snowplow/snowplow-micro?sort=semver
@@ -45,8 +45,9 @@ Licensed under the [Snowplow Community License](https://docs.snowplow.io/communi
 [gh-actions-image]: https://github.com/snowplow-incubator/snowplow-micro/actions/workflows/test.yml/badge.svg?branch=master
 [gh-releases]: https://github.com/snowplow-incubator/snowplow-micro/releases
 
-[license]: https://docs.snowplow.io/docs/contributing/community-license-faq/
-[license-image]: https://img.shields.io/badge/license-Snowplow--Community-blue.svg?style=flat
+[license]: https://docs.snowplow.io/limited-use-license-1.0
+[license-image]: https://img.shields.io/badge/license-Snowplow--Limited--Use-blue.svg?style=flat
+[faq]: https://docs.snowplow.io/docs/contributing/limited-use-license-faq/
 
 [snowplow]: https://github.com/snowplow/snowplow
 [discourse]: https://discourse.snowplow.io
