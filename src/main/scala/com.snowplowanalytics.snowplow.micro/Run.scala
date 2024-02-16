@@ -53,10 +53,10 @@ object Run {
 
   private def buildEnvironment(config: MicroConfig): Resource[IO, Unit] = {
     for {
-      _ <- Resource.eval(setupSSLContext())
+      customSslContext <- Resource.eval(setupSSLContext())
       enrichmentRegistry <- buildEnrichmentRegistry(config.enrichmentsConfig)
       badProcessor = Processor(BuildInfo.name, BuildInfo.version)
-      adapterRegistry = MicroAdapterRegistry.create() 
+      adapterRegistry = MicroAdapterRegistry.create()
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
       sink = new MemorySink(config.iglu.client, lookup, enrichmentRegistry, config.outputEnrichedTsv, badProcessor, adapterRegistry)
       collectorService = new Service[IO](
@@ -73,20 +73,21 @@ object Run {
 
       miniRoutes = new Routing(config.iglu.resolver)(lookup).value
       allRoutes = miniRoutes <+> collectorRoutes
-      _ <- HttpServer.build[IO](
+      _ <- MicroHttpServer.build(
         allRoutes,
         config.collector.port,
         secure = false,
+        customSslContext = None,
         config.collector.hsts,
         config.collector.networking,
         config.collector.monitoring.metrics
       )
-      _ <- runHttpsServerIfEnabled(config, allRoutes) 
+      _ <- runHttpsServerIfEnabled(config, customSslContext, allRoutes) 
     } yield ()
   }
 
-  private def setupSSLContext(): IO[Unit] = IO {
-    sys.env.get(Configuration.EnvironmentVariables.sslCertificatePassword).foreach { password =>
+  private def setupSSLContext(): IO[Option[SSLContext]] = IO {
+    sys.env.get(Configuration.EnvironmentVariables.sslCertificatePassword).map { password =>
       // Adapted from https://doc.akka.io/docs/akka-http/current/server-side/server-https-support.html.
       // We could use SSLContext.getDefault instead of all of this, but then we would need to
       // force the user to add arcane -D flags when running Micro, which is not the best experience.
@@ -102,8 +103,7 @@ object Run {
 
       val context = SSLContext.getInstance("TLS")
       context.init(keyManagerFactory.getKeyManagers, trustManagerFactory.getTrustManagers, new SecureRandom)
-
-      SSLContext.setDefault(context)
+      context
     }
   }
 
@@ -138,12 +138,15 @@ object Run {
       }
   }
 
-  private def runHttpsServerIfEnabled(config: MicroConfig, routes: HttpRoutes[IO]): Resource[IO, Unit] = {
+  private def runHttpsServerIfEnabled(config: MicroConfig,
+                                      customSslContext: Option[SSLContext],
+                                      routes: HttpRoutes[IO]): Resource[IO, Unit] = {
     if (config.collector.ssl.enable) {
-      HttpServer.build[IO](
+      MicroHttpServer.build(
         routes,
         config.collector.ssl.port,
         secure = true,
+        customSslContext,
         config.collector.hsts,
         config.collector.networking,
         config.collector.monitoring.metrics
