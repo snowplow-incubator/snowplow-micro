@@ -76,7 +76,7 @@ object Configuration {
     }
   }
 
-  def loadCollectorConfig(path: Option[Path]): EitherT[IO, String, CollectorConfig[SinkConfig]] = {
+  private def loadCollectorConfig(path: Option[Path]): EitherT[IO, String, CollectorConfig[SinkConfig]] = {
     val resolveOrder = (config: TypesafeConfig) =>
       namespaced(ConfigFactory.load(namespaced(config.withFallback(namespaced(ConfigFactory.parseResources("collector-micro.conf"))))))
 
@@ -84,7 +84,7 @@ object Configuration {
       .map(adjustSslConfig)
   }
 
-  def loadIgluResources(path: Option[Path]): EitherT[IO, String, IgluResources] = {
+  private def loadIgluResources(path: Option[Path]): EitherT[IO, String, IgluResources] = {
     val resolveOrder = (config: TypesafeConfig) =>
       config.withFallback(ConfigFactory.parseResources("default-iglu-resolver.conf"))
 
@@ -92,7 +92,7 @@ object Configuration {
       .flatMap(buildIgluResources)
   }
 
-  def loadEnrichmentConfig(igluClient: IgluCirceClient[IO]): EitherT[IO, String, List[EnrichmentConf]] = {
+  private def loadEnrichmentConfig(igluClient: IgluCirceClient[IO]): EitherT[IO, String, List[EnrichmentConf]] = {
     Option(getClass.getResource("/enrichments")) match {
       case Some(definedEnrichments) =>
         val path = Paths.get(definedEnrichments.toURI)
@@ -135,11 +135,12 @@ object Configuration {
   }
 
   private def buildJSConfig(script: FS2Path): IO[EnrichmentConf.JavascriptScriptConf] = {
+    val schemaKey = SchemaKey("com.snowplowanalytics.snowplow", "javascript_script_config", "jsonschema", SchemaVer.Full(1, 0, 0)) 
     Files[IO]
       .readUtf8Lines(script)
       .compile
       .toList
-      .map(lines => EnrichmentConf.JavascriptScriptConf(null, lines.mkString("\n")))
+      .map(lines => EnrichmentConf.JavascriptScriptConf(schemaKey, lines.mkString("\n")))
   }
 
   private def listAvailableEnrichments(enrichmentsDirectory: Path, fileType: String) = {
