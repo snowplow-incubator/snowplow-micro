@@ -18,6 +18,7 @@ import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.client.resolver.registries.{JavaNetRegistryLookup, Registry}
 import com.snowplowanalytics.snowplow.badrows.Processor
+import com.snowplowanalytics.snowplow.enrich.common.adapters.AdapterRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import org.specs2.mutable.SpecificationLike
 
@@ -166,7 +167,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       igluClient <- IgluCirceClient.fromResolver[IO](Resolver(List(Registry.IgluCentral), None), 500)
       enrichmentRegistry = new EnrichmentRegistry[IO]()
       processor = Processor(BuildInfo.name, BuildInfo.version)
-      adapterRegistry = MicroAdapterRegistry.create()
+      adapterRegistry = new AdapterRegistry[IO](Map.empty, TestAdapterRegistry.adaptersSchemas)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
     } yield new MemorySink(igluClient, lookup, enrichmentRegistry, false, processor, adapterRegistry)
   }

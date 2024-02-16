@@ -1,11 +1,10 @@
 package com.snowplowanalytics.snowplow.micro
 
-import cats.effect.IO
 import com.snowplowanalytics.snowplow.enrich.common.adapters._
 
-object MicroAdapterRegistry {
- 
-  private val adaptersSchemas = AdaptersSchemas(
+object TestAdapterRegistry {
+
+  val adaptersSchemas = AdaptersSchemas(
     CallrailSchemas("iglu:com.callrail/call_complete/jsonschema/1-0-2"),
     CloudfrontAccessLogSchemas(
       "iglu:com.amazon.aws.cloudfront/wd_access_log/jsonschema/1-0-2",
@@ -151,7 +150,4 @@ object MicroAdapterRegistry {
     )
   )
 
-  def create(): AdapterRegistry[IO] = {
-    new AdapterRegistry[IO](Map.empty, adaptersSchemas)
-  }
 }

@@ -21,11 +21,13 @@ import com.snowplowanalytics.iglu.client.resolver.registries.{JavaNetRegistryLoo
 import com.snowplowanalytics.iglu.core.circe.CirceIgluCodecs._
 import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
 import com.snowplowanalytics.snowplow.collector.core.{Config => CollectorConfig}
+import com.snowplowanalytics.snowplow.enrich.common.adapters.{CallrailSchemas, CloudfrontAccessLogSchemas, GoogleAnalyticsSchemas, HubspotSchemas, MailchimpSchemas, MailgunSchemas, MandrillSchemas, MarketoSchemas, OlarkSchemas, PagerdutySchemas, PingdomSchemas, SendgridSchemas, StatusGatorSchemas, UnbounceSchemas, UrbanAirshipSchemas, VeroSchemas, AdaptersSchemas => EnrichAdaptersSchemas}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.EnrichmentConf
 import com.typesafe.config.{ConfigFactory, ConfigParseOptions, Config => TypesafeConfig}
 import fs2.io.file.{Files, Path => FS2Path}
 import io.circe.config.syntax.CirceConfigOps
+import io.circe.generic.semiauto.deriveDecoder
 import io.circe.syntax.EncoderOps
 import io.circe.{Decoder, Json}
 import org.typelevel.log4cats.Logger
@@ -38,14 +40,14 @@ object Configuration {
 
   object Cli {
     final case class Config(collector: Option[Path], iglu: Option[Path], outputEnrichedTsv: Boolean)
-    
+
     private val collector = Opts.option[Path]("collector-config", "Path to HOCON configuration (optional)", "c", "config.hocon").orNone
     private val iglu = Opts.option[Path]("iglu", "Configuration file for Iglu Client", "i", "iglu.json").orNone
     private val outputEnrichedTsv = Opts.flag("output-tsv", "Print events in TSV format to standard output", "t").orFalse
-    
-    val config: Opts[Config] = (collector, iglu, outputEnrichedTsv).mapN(Config.apply) 
+
+    val config: Opts[Config] = (collector, iglu, outputEnrichedTsv).mapN(Config.apply)
   }
-  
+
 
   object EnvironmentVariables {
     val igluRegistryUrl = "MICRO_IGLU_REGISTRY_URL"
@@ -54,13 +56,17 @@ object Configuration {
   }
 
   final case class DummySinkConfig()
-  type SinkConfig = DummySinkConfig 
+
+  type SinkConfig = DummySinkConfig
   implicit val dec: Decoder[DummySinkConfig] = Decoder.instance(_ => Right(DummySinkConfig()))
 
   final case class MicroConfig(collector: CollectorConfig[SinkConfig],
                                iglu: IgluResources,
                                enrichmentsConfig: List[EnrichmentConf],
+                               adaptersSchemas: AdaptersSchemas,
                                outputEnrichedTsv: Boolean)
+
+  final case class AdaptersSchemas(adaptersSchemas: EnrichAdaptersSchemas)
 
   final case class IgluResources(resolver: Resolver[IO], client: IgluCirceClient[IO])
 
@@ -72,7 +78,8 @@ object Configuration {
         collectorConfig <- loadCollectorConfig(cliConfig.collector)
         igluResources <- loadIgluResources(cliConfig.iglu)
         enrichmentsConfig <- loadEnrichmentConfig(igluResources.client)
-      } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, cliConfig.outputEnrichedTsv)
+        adaptersSchemas <- loadAdaptersSchemas()
+      } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, adaptersSchemas, cliConfig.outputEnrichedTsv)
     }
   }
 
@@ -99,10 +106,17 @@ object Configuration {
           asJson <- loadEnrichmentsAsSDD(path, igluClient, fileType = ".json")
           asHocon <- loadEnrichmentsAsSDD(path, igluClient, fileType = ".hocon")
           asJSScripts <- loadJSScripts(path)
-        } yield asJson ::: asHocon ::: asJSScripts 
+        } yield asJson ::: asHocon ::: asJSScripts
       case None =>
         EitherT.rightT[IO, String](List.empty)
     }
+  }
+
+  private def loadAdaptersSchemas(): EitherT[IO, String, AdaptersSchemas] = {
+    val resolveOrder = (config: TypesafeConfig) => ConfigFactory.load(config)
+
+    //It's not configurable in micro, we load it from reference.conf provided by enrich
+    loadConfig[AdaptersSchemas](path = None, resolveOrder)
   }
 
   private def buildIgluResources(resolverConfig: ResolverConfig): EitherT[IO, String, IgluResources] =
@@ -112,7 +126,7 @@ object Configuration {
       client <- EitherT.liftF(IgluCirceClient.fromResolver[IO](completeResolver, resolverConfig.cacheSize))
     } yield IgluResources(resolver, client)
 
-  private def loadEnrichmentsAsSDD(enrichmentsDirectory: Path, 
+  private def loadEnrichmentsAsSDD(enrichmentsDirectory: Path,
                                    igluClient: IgluCirceClient[IO],
                                    fileType: String): EitherT[IO, String, List[EnrichmentConf]] = {
     listAvailableEnrichments(enrichmentsDirectory, fileType)
@@ -129,7 +143,7 @@ object Configuration {
   }
 
   private def buildJSConfig(script: FS2Path): IO[EnrichmentConf.JavascriptScriptConf] = {
-    val schemaKey = SchemaKey("com.snowplowanalytics.snowplow", "javascript_script_config", "jsonschema", SchemaVer.Full(1, 0, 0)) 
+    val schemaKey = SchemaKey("com.snowplowanalytics.snowplow", "javascript_script_config", "jsonschema", SchemaVer.Full(1, 0, 0))
     Files[IO]
       .readUtf8Lines(script)
       .compile
@@ -195,7 +209,7 @@ object Configuration {
 
   private def handleInputPath(path: Option[Path]): TypesafeConfig = {
     path match {
-      case Some(definedPath) => 
+      case Some(definedPath) =>
         //Fail when provided file doesn't exist
         ConfigFactory.parseFile(definedPath.toFile, ConfigParseOptions.defaults().setAllowMissing(false))
       case None => ConfigFactory.empty()
@@ -211,5 +225,42 @@ object Configuration {
   }
 
   implicit val resolverDecoder: Decoder[ResolverConfig] = Decoder.decodeJson.emap(json => Resolver.parseConfig(json).leftMap(_.show))
+
+  implicit val adaptersSchemasDecoder: Decoder[AdaptersSchemas] =
+    deriveDecoder[AdaptersSchemas]
+  implicit val enrichAdaptersSchemasDecoder: Decoder[EnrichAdaptersSchemas] =
+    deriveDecoder[EnrichAdaptersSchemas]
+  implicit val callrailSchemasDecoder: Decoder[CallrailSchemas] =
+    deriveDecoder[CallrailSchemas]
+  implicit val cloudfrontAccessLogSchemasDecoder: Decoder[CloudfrontAccessLogSchemas] =
+    deriveDecoder[CloudfrontAccessLogSchemas]
+  implicit val googleAnalyticsSchemasDecoder: Decoder[GoogleAnalyticsSchemas] =
+    deriveDecoder[GoogleAnalyticsSchemas]
+  implicit val hubspotSchemasDecoder: Decoder[HubspotSchemas] =
+    deriveDecoder[HubspotSchemas]
+  implicit val mailchimpSchemasDecoder: Decoder[MailchimpSchemas] =
+    deriveDecoder[MailchimpSchemas]
+  implicit val mailgunSchemasDecoder: Decoder[MailgunSchemas] =
+    deriveDecoder[MailgunSchemas]
+  implicit val mandrillSchemasDecoder: Decoder[MandrillSchemas] =
+    deriveDecoder[MandrillSchemas]
+  implicit val marketoSchemasDecoder: Decoder[MarketoSchemas] =
+    deriveDecoder[MarketoSchemas]
+  implicit val olarkSchemasDecoder: Decoder[OlarkSchemas] =
+    deriveDecoder[OlarkSchemas]
+  implicit val pagerdutySchemasDecoder: Decoder[PagerdutySchemas] =
+    deriveDecoder[PagerdutySchemas]
+  implicit val pingdomSchemasDecoder: Decoder[PingdomSchemas] =
+    deriveDecoder[PingdomSchemas]
+  implicit val sendgridSchemasDecoder: Decoder[SendgridSchemas] =
+    deriveDecoder[SendgridSchemas]
+  implicit val statusgatorSchemasDecoder: Decoder[StatusGatorSchemas] =
+    deriveDecoder[StatusGatorSchemas]
+  implicit val unbounceSchemasDecoder: Decoder[UnbounceSchemas] =
+    deriveDecoder[UnbounceSchemas]
+  implicit val urbanAirshipSchemasDecoder: Decoder[UrbanAirshipSchemas] =
+    deriveDecoder[UrbanAirshipSchemas]
+  implicit val veroSchemasDecoder: Decoder[VeroSchemas] =
+    deriveDecoder[VeroSchemas]
 
 }
