@@ -22,6 +22,7 @@ import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegist
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf}
 import com.snowplowanalytics.snowplow.enrich.common.utils.{HttpClient, ShiftExecution}
 import com.snowplowanalytics.snowplow.micro.Configuration.MicroConfig
+import org.http4s.HttpRoutes
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
@@ -74,12 +75,13 @@ object Run {
       allRoutes = miniRoutes <+> collectorRoutes
       _ <- HttpServer.build[IO](
         allRoutes,
-        if (config.collector.ssl.enable) config.collector.ssl.port else config.collector.port,
-        config.collector.ssl.enable,
+        config.collector.port,
+        secure = false,
         config.collector.hsts,
         config.collector.networking,
         config.collector.monitoring.metrics
       )
+      _ <- runHttpsServerIfEnabled(config, allRoutes) 
     } yield ()
   }
 
@@ -135,7 +137,22 @@ object Run {
         logger.info(s"Downloading $uri...") *> IO(uri.toURL #> new File(location) !!)
       }
   }
-  
+
+  private def runHttpsServerIfEnabled(config: MicroConfig, routes: HttpRoutes[IO]): Resource[IO, Unit] = {
+    if (config.collector.ssl.enable) {
+      HttpServer.build[IO](
+        routes,
+        config.collector.ssl.port,
+        secure = true,
+        config.collector.hsts,
+        config.collector.networking,
+        config.collector.monitoring.metrics
+      ).void
+    } else {
+      Resource.unit
+    }
+  }
+
   private def handleAppErrors(appOutput: EitherT[IO, String, ExitCode]): IO[ExitCode] = {
     appOutput
       .leftSemiflatMap { error =>
