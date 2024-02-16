@@ -81,6 +81,7 @@ object Configuration {
       namespaced(ConfigFactory.load(namespaced(config.withFallback(namespaced(ConfigFactory.parseResources("collector-micro.conf"))))))
 
     loadConfig[CollectorConfig[SinkConfig]](path, resolveOrder)
+      .map(adjustSslConfig)
   }
 
   def loadIgluResources(path: Option[Path]): EitherT[IO, String, IgluResources] = {
@@ -112,6 +113,10 @@ object Configuration {
       client <- EitherT.liftF(IgluCirceClient.fromResolver[IO](completeResolver, resolverConfig.cacheSize))
     } yield IgluResources(resolver, client)
 
+  private def adjustSslConfig(config: CollectorConfig[SinkConfig]): CollectorConfig[SinkConfig] = {
+    val envVarPresent = sys.env.contains(EnvironmentVariables.sslCertificatePassword)
+    config.copy(ssl = config.ssl.copy(enable = envVarPresent))
+  }
 
   private def loadEnrichmentsAsSDD(enrichmentsDirectory: Path, 
                                    igluClient: IgluCirceClient[IO],
