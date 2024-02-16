@@ -145,7 +145,6 @@ object Configuration {
 
   private def listAvailableEnrichments(enrichmentsDirectory: Path, fileType: String) = {
     listFiles(enrichmentsDirectory, fileType)
-      .flatTap(files => logger.info(s"Files found in $enrichmentsDirectory: ${files.mkString(", ")}"))
       .attemptT
       .leftMap(e => show"Cannot list ${enrichmentsDirectory.toAbsolutePath.toString} directory with JSON: ${e.getMessage}")
   }
@@ -155,6 +154,7 @@ object Configuration {
       .filter(path => path.toString.endsWith(fileType))
       .compile
       .toList
+      .flatTap(files => logger.info(s"Files with extension: '$fileType' found in $path: ${files.mkString("[", ", ", "]")}"))
   }
 
   private def loadEnrichmentsAsJsons(enrichments: List[FS2Path]): EitherT[IO, String, List[Json]] = {
