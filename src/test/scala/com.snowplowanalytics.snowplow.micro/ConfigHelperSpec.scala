@@ -1,23 +1,42 @@
 /*
- * Copyright (c) 2019-2022 Snowplow Analytics Ltd. All rights reserved.
+ * Copyright (c) 2019-present Snowplow Analytics Ltd. All rights reserved.
  *
- * This program is licensed to you under the Apache License Version 2.0,
- * and you may not use this file except in compliance with the Apache License Version 2.0.
- * You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the Apache License Version 2.0 is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
+ * This software is made available by Snowplow Analytics, Ltd.,
+ * under the terms of the Snowplow Limited Use License Agreement, Version 1.0
+ * located at https://docs.snowplow.io/limited-use-license-1.0
+ * BY INSTALLING, DOWNLOADING, ACCESSING, USING OR DISTRIBUTING ANY PORTION
+ * OF THE SOFTWARE, YOU AGREE TO THE TERMS OF SUCH LICENSE AGREEMENT.
  */
+
 package com.snowplowanalytics.snowplow.micro
 
+import cats.effect.IO
+import cats.effect.testing.specs2.CatsEffect
+import com.monovore.decline.Command
+import com.snowplowanalytics.snowplow.micro.Configuration.MicroConfig
 import org.specs2.mutable.Specification
 
-class ConfigHelperSpec extends Specification {
-  "ConfigHelper" >> {
-    "will produce a valid parsed collector config if `--collector-config` is not present" >> {
-      ConfigHelper.parseConfig(Array()) must not(throwA[Exception])
+class ConfigHelperSpec extends Specification with CatsEffect {
+  "Configuration loader should work when" >> {
+    "no custom args are provided and only defaults are used" >> {
+      load(args = List.empty)
+        .map { result =>
+          result must beRight[MicroConfig].like {
+            case config =>
+              config.collector.port must beEqualTo(9090)
+              config.collector.ssl.enable must beFalse 
+              config.collector.ssl.port must beEqualTo(9543) 
+              
+              config.enrichmentsConfig.isEmpty must beTrue
+              config.iglu.resolver.repos.map(_.config.name) must containTheSameElementsAs(List("Iglu Central", "Iglu Central - Mirror 01"))
+              
+              config.outputEnrichedTsv must beFalse
+          }
+        }
     }
+  }
+
+  private def load(args: List[String]): IO[Either[String, MicroConfig]] = {
+    Command("test-app", "test")(Configuration.load()).parse(args).right.get.value
   }
 }
