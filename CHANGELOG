@@ -1,3 +1,8 @@
+Version 2.1.0 (2024-04-08)
+--------------------------
+Update the license to Snowplow Limited Use License Agreement 1.0
+Upgrade collector to 3.2.0 and enrich to 4.2.0
+
 Version 2.0.0 (2023-08-24)
 --------------------------
 Add a UI
