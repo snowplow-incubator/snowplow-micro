@@ -124,7 +124,7 @@ object Configuration {
       resolver <- Resolver.fromConfig[IO](resolverConfig).leftMap(_.show)
       completeResolver = resolver.copy(repos = resolver.repos ++ readIgluExtraRegistry())
       client <- EitherT.liftF(IgluCirceClient.fromResolver[IO](completeResolver, resolverConfig.cacheSize))
-    } yield IgluResources(resolver, client)
+    } yield IgluResources(completeResolver, client)
 
   private def loadEnrichmentsAsSDD(enrichmentsDirectory: Path,
                                    igluClient: IgluCirceClient[IO],
