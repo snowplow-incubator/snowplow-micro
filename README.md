@@ -17,7 +17,9 @@ Learn more in the documentation: https://docs.snowplow.io/docs/getting-started-w
 
 ## Maintainer quick start
 
-Assuming [Git][git] and [sbt][sbt]:
+First, install [Git][git], [sbt][sbt] and [npm][npm].
+
+Then clone the repository and publish the Collector dependency locally:
 
 ```text
 git clone git@github.com:snowplow-incubator/snowplow-micro.git
@@ -26,9 +28,22 @@ cd snowplow-micro
 git clone --branch 3.2.0 --depth 1 git@github.com:snowplow/stream-collector.git
 cd stream-collector
 sbt +publishLocal && cd ..
+```
 
+To run the tests:
+
+```
 sbt test
 ```
+
+To build a Docker image for local testing:
+```
+cd ui
+npm build && cd ..
+sbt docker:publishLocal
+```
+
+Note the Docker image name in the output.
 
 ## Copyright and License
 
@@ -74,3 +89,4 @@ Licensed under the [Snowplow Limited Use License Agreement][license]. _(If you a
 
 [git]: https://git-scm.com/
 [sbt]: https://www.scala-sbt.org/
+[npm]: https://www.npmjs.com/
