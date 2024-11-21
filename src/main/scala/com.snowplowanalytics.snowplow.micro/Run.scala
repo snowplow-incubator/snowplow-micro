@@ -18,7 +18,6 @@ import com.snowplowanalytics.iglu.client.resolver.registries.JavaNetRegistryLook
 import com.snowplowanalytics.snowplow.badrows.Processor
 import com.snowplowanalytics.snowplow.collector.core._
 import com.snowplowanalytics.snowplow.collector.core.model.Sinks
-import com.snowplowanalytics.snowplow.enrich.common.adapters.AdapterRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf}
 import com.snowplowanalytics.snowplow.enrich.common.utils.{HttpClient, ShiftExecution}
@@ -56,9 +55,8 @@ object Run {
       sslContext <- Resource.eval(setupSSLContext())
       enrichmentRegistry <- buildEnrichmentRegistry(config.enrichmentsConfig)
       badProcessor = Processor(BuildInfo.name, BuildInfo.version)
-      adapterRegistry = new AdapterRegistry[IO](Map.empty, config.adaptersSchemas.adaptersSchemas)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
-      sink = new MemorySink(config.iglu.client, lookup, enrichmentRegistry, config.outputEnrichedTsv, badProcessor, adapterRegistry)
+      sink = new MemorySink(config.iglu.client, lookup, enrichmentRegistry, config.outputEnrichedTsv, badProcessor, config.enrichConfig)
       collectorService = new Service[IO](
         config.collector,
         Sinks(sink, sink),

@@ -21,12 +21,13 @@ import com.snowplowanalytics.snowplow.badrows.{BadRow, Failure, Payload, Process
 import com.snowplowanalytics.snowplow.collector.core.Sink
 import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
 import com.snowplowanalytics.snowplow.enrich.common.adapters.{AdapterRegistry, RawEvent}
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.{AtomicFields, EnrichmentManager, EnrichmentRegistry}
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.{EnrichmentManager, EnrichmentRegistry}
 import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
 import com.snowplowanalytics.snowplow.enrich.common.utils.ConversionUtils
 import io.circe.syntax._
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
+import com.snowplowanalytics.snowplow.micro.Configuration.EnrichConfig
 
 /** Sink of the collector that Snowplow Micro is.
  * Contains the functions that are called for each tracking event sent
@@ -40,9 +41,11 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
                        enrichmentRegistry: EnrichmentRegistry[IO],
                        outputEnrichedTsv: Boolean,
                        processor: Processor,
-                       adapterRegistry: AdapterRegistry[IO]) extends Sink[IO] {
+                       enrichConfig: EnrichConfig) extends Sink[IO] {
   override val maxBytes = Int.MaxValue
   private lazy val logger = LoggerFactory.getLogger("EventLog")
+
+  private val adapterRegistry = new AdapterRegistry[IO](Map.empty, enrichConfig.adaptersSchemas)
 
   override def isHealthy: IO[Boolean] = IO.pure(true)
 
@@ -75,7 +78,7 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
       case Validated.Valid(maybePayload) =>
         maybePayload match {
           case Some(collectorPayload) =>
-            adapterRegistry.toRawEvents(collectorPayload, igluClient, processor, registryLookup).flatMap {
+            adapterRegistry.toRawEvents(collectorPayload, igluClient, processor, registryLookup, enrichConfig.maxJsonDepth).flatMap {
               case Validated.Valid(rawEvents) =>
                 val partitionEvents = rawEvents.toList.foldLeftM((Nil, Nil): (List[GoodEvent], List[BadEvent])) {
                   case ((good, bad), rawEvent) =>
@@ -135,8 +138,11 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
         EtlPipeline.FeatureFlags(acceptInvalid = false, legacyEnrichmentOrder = false),
         IO.unit,
         registryLookup,
-        AtomicFields.from(Map.empty)
+        enrichConfig.validation.atomicFieldsLimits,
+        emitIncomplete = false,
+        enrichConfig.maxJsonDepth
       )
+      .toEither
       .subflatMap { enriched =>
         EventConverter.fromEnriched(enriched)
           .leftMap { failure =>

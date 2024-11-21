@@ -22,7 +22,7 @@ import com.snowplowanalytics.iglu.core.circe.CirceIgluCodecs._
 import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer, SelfDescribingData}
 import com.snowplowanalytics.snowplow.collector.core.{Config => CollectorConfig}
 import com.snowplowanalytics.snowplow.enrich.common.adapters.{CallrailSchemas, CloudfrontAccessLogSchemas, GoogleAnalyticsSchemas, HubspotSchemas, MailchimpSchemas, MailgunSchemas, MandrillSchemas, MarketoSchemas, OlarkSchemas, PagerdutySchemas, PingdomSchemas, SendgridSchemas, StatusGatorSchemas, UnbounceSchemas, UrbanAirshipSchemas, VeroSchemas, AdaptersSchemas => EnrichAdaptersSchemas}
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.{AtomicFields, EnrichmentRegistry}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.EnrichmentConf
 import com.typesafe.config.{ConfigFactory, ConfigParseOptions, Config => TypesafeConfig}
 import fs2.io.file.{Files, Path => FS2Path}
@@ -63,10 +63,15 @@ object Configuration {
   final case class MicroConfig(collector: CollectorConfig[SinkConfig],
                                iglu: IgluResources,
                                enrichmentsConfig: List[EnrichmentConf],
-                               adaptersSchemas: AdaptersSchemas,
+                               enrichConfig: EnrichConfig,
                                outputEnrichedTsv: Boolean)
 
-  final case class AdaptersSchemas(adaptersSchemas: EnrichAdaptersSchemas)
+  final case class EnrichValidation(atomicFieldsLimits: AtomicFields)
+  final case class EnrichConfig(
+    adaptersSchemas: EnrichAdaptersSchemas,
+    maxJsonDepth: Int,
+    validation: EnrichValidation
+  )
 
   final case class IgluResources(resolver: Resolver[IO], client: IgluCirceClient[IO])
 
@@ -76,10 +81,10 @@ object Configuration {
     Cli.config.map { cliConfig =>
       for {
         collectorConfig <- loadCollectorConfig(cliConfig.collector)
-        igluResources <- loadIgluResources(cliConfig.iglu)
+        enrichConfig <- loadEnrichConfig()
+        igluResources <- loadIgluResources(cliConfig.iglu, enrichConfig.maxJsonDepth)
         enrichmentsConfig <- loadEnrichmentConfig(igluResources.client)
-        adaptersSchemas <- loadAdaptersSchemas()
-      } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, adaptersSchemas, cliConfig.outputEnrichedTsv)
+      } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, enrichConfig, cliConfig.outputEnrichedTsv)
     }
   }
 
@@ -90,12 +95,12 @@ object Configuration {
     loadConfig[CollectorConfig[SinkConfig]](path, resolveOrder)
   }
 
-  private def loadIgluResources(path: Option[Path]): EitherT[IO, String, IgluResources] = {
+  private def loadIgluResources(path: Option[Path], maxJsonDepth: Int): EitherT[IO, String, IgluResources] = {
     val resolveOrder = (config: TypesafeConfig) =>
       config.withFallback(ConfigFactory.parseResources("default-iglu-resolver.conf"))
 
     loadConfig[ResolverConfig](path, resolveOrder)
-      .flatMap(buildIgluResources)
+      .flatMap(resolverConfig => buildIgluResources(resolverConfig, maxJsonDepth))
   }
 
   private def loadEnrichmentConfig(igluClient: IgluCirceClient[IO]): EitherT[IO, String, List[EnrichmentConf]] = {
@@ -112,18 +117,18 @@ object Configuration {
     }
   }
 
-  private def loadAdaptersSchemas(): EitherT[IO, String, AdaptersSchemas] = {
+  def loadEnrichConfig(): EitherT[IO, String, EnrichConfig] = {
     val resolveOrder = (config: TypesafeConfig) => ConfigFactory.load(config)
 
     //It's not configurable in micro, we load it from reference.conf provided by enrich
-    loadConfig[AdaptersSchemas](path = None, resolveOrder)
+    loadConfig[EnrichConfig](path = None, resolveOrder)
   }
 
-  private def buildIgluResources(resolverConfig: ResolverConfig): EitherT[IO, String, IgluResources] =
+  private def buildIgluResources(resolverConfig: ResolverConfig, maxJsonDepth: Int): EitherT[IO, String, IgluResources] =
     for {
       resolver <- Resolver.fromConfig[IO](resolverConfig).leftMap(_.show)
       completeResolver = resolver.copy(repos = resolver.repos ++ readIgluExtraRegistry())
-      client <- EitherT.liftF(IgluCirceClient.fromResolver[IO](completeResolver, resolverConfig.cacheSize))
+      client <- EitherT.liftF(IgluCirceClient.fromResolver[IO](completeResolver, resolverConfig.cacheSize, maxJsonDepth))
     } yield IgluResources(completeResolver, client)
 
   private def loadEnrichmentsAsSDD(enrichmentsDirectory: Path,
@@ -226,8 +231,8 @@ object Configuration {
 
   implicit val resolverDecoder: Decoder[ResolverConfig] = Decoder.decodeJson.emap(json => Resolver.parseConfig(json).leftMap(_.show))
 
-  implicit val adaptersSchemasDecoder: Decoder[AdaptersSchemas] =
-    deriveDecoder[AdaptersSchemas]
+  implicit val enrichConfigDecoder: Decoder[EnrichConfig] =
+    deriveDecoder[EnrichConfig]
   implicit val enrichAdaptersSchemasDecoder: Decoder[EnrichAdaptersSchemas] =
     deriveDecoder[EnrichAdaptersSchemas]
   implicit val callrailSchemasDecoder: Decoder[CallrailSchemas] =
@@ -263,4 +268,18 @@ object Configuration {
   implicit val veroSchemasDecoder: Decoder[VeroSchemas] =
     deriveDecoder[VeroSchemas]
 
+  implicit val validationDecoder: Decoder[EnrichValidation] =
+    deriveDecoder[EnrichValidation]
+  implicit val atomicFieldsDecoder: Decoder[AtomicFields] = Decoder[Map[String, Int]].emap { fieldsLimits =>
+    val configuredFields = fieldsLimits.keys.toList
+    val supportedFields = AtomicFields.supportedFields.map(_.name)
+    val unsupportedFields = configuredFields.diff(supportedFields)
+
+    if (unsupportedFields.nonEmpty)
+      Left(s"""
+        |Configured atomic fields: ${unsupportedFields.mkString("[", ",", "]")} are not supported.
+        |Supported fields: ${supportedFields.mkString("[", ",", "]")}""".stripMargin)
+    else
+      Right(AtomicFields.from(fieldsLimits))
+  }
 }

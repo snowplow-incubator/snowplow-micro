@@ -16,7 +16,6 @@ import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.client.resolver.registries.{JavaNetRegistryLookup, Registry}
 import com.snowplowanalytics.snowplow.badrows.Processor
-import com.snowplowanalytics.snowplow.enrich.common.adapters.AdapterRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import org.specs2.mutable.SpecificationLike
 
@@ -162,12 +161,12 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
 
   private def createSink(): IO[MemorySink] = {
     for {
-      igluClient <- IgluCirceClient.fromResolver[IO](Resolver(List(Registry.IgluCentral), None), 500)
+      enrichConfig <- Configuration.loadEnrichConfig().value.map(_.getOrElse(throw new IllegalArgumentException("Can't read defaults from Enrich config")))
+      igluClient <- IgluCirceClient.fromResolver[IO](Resolver[IO](List(Registry.IgluCentral), None), 500, enrichConfig.maxJsonDepth)
       enrichmentRegistry = new EnrichmentRegistry[IO]()
       processor = Processor(BuildInfo.name, BuildInfo.version)
-      adapterRegistry = new AdapterRegistry[IO](Map.empty, TestAdapterRegistry.adaptersSchemas)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
-    } yield new MemorySink(igluClient, lookup, enrichmentRegistry, false, processor, adapterRegistry)
+    } yield new MemorySink(igluClient, lookup, enrichmentRegistry, false, processor, enrichConfig)
   }
 
 }
