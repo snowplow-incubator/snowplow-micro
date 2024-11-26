@@ -19,9 +19,8 @@ import com.snowplowanalytics.snowplow.micro.Configuration.{MicroConfig, SinkConf
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.headers.`Strict-Transport-Security`
 import org.http4s.server.Server
-import org.http4s.server.middleware.{HSTS, Metrics, Timeout, Logger => LoggerMiddleware}
+import org.http4s.server.middleware.{HSTS, Metrics, Timeout}
 import org.http4s.{HttpApp, HttpRoutes}
-import org.typelevel.ci.CIString
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
@@ -57,9 +56,7 @@ object MicroHttpServer {
 
   private def builder(routes: HttpRoutes[IO], config: CollectorConfig[SinkConfig]): BlazeServerBuilder[IO] = {
     BlazeServerBuilder[IO]
-      .withHttpApp(
-        loggerMiddleware(timeoutMiddleware(hstsMiddleware(config.hsts, routes.orNotFound), config.networking), config.debug.http)
-      )
+      .withHttpApp(timeoutMiddleware(hstsMiddleware(config.hsts, routes.orNotFound), config.networking))
       .withIdleTimeout(config.networking.idleTimeout)
       .withMaxConnections(config.networking.maxConnections)
       .withResponseHeaderTimeout(config.networking.responseHeaderTimeout)
@@ -68,16 +65,6 @@ object MicroHttpServer {
         maxHeadersLen = config.networking.maxHeadersLength
       )
   }
-
-  private def loggerMiddleware(routes: HttpApp[IO], config: CollectorConfig.Debug.Http): HttpApp[IO] =
-    if (config.enable) {
-      LoggerMiddleware.httpApp[IO](
-        logHeaders = config.logHeaders,
-        logBody = config.logBody,
-        redactHeadersWhen = config.redactHeaders.map(CIString(_)).contains(_),
-        logAction = Some((msg: String) => Logger[IO].debug(msg))
-      )(routes)
-    } else routes
 
   private def timeoutMiddleware(routes: HttpApp[IO], networking: CollectorConfig.Networking): HttpApp[IO] =
     Timeout.httpApp[IO](timeout = networking.responseHeaderTimeout)(routes)

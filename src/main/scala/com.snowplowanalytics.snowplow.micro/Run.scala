@@ -66,7 +66,6 @@ object Run {
         config.collector.enableDefaultRedirect,
         config.collector.rootResponse.enabled,
         config.collector.crossDomain.enabled,
-        config.collector.networking.bodyReadTimeout,
         collectorService
       ).value
 
