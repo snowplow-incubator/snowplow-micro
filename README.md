@@ -60,7 +60,7 @@ Licensed under the [Snowplow Limited Use License Agreement][license]. _(If you a
 [gh-actions-image]: https://github.com/snowplow-incubator/snowplow-micro/actions/workflows/test.yml/badge.svg?branch=master
 [gh-releases]: https://github.com/snowplow-incubator/snowplow-micro/releases
 
-[license]: https://docs.snowplow.io/limited-use-license-1.0
+[license]: https://docs.snowplow.io/limited-use-license-1.1
 [license-image]: https://img.shields.io/badge/license-Snowplow--Limited--Use-blue.svg?style=flat
 [faq]: https://docs.snowplow.io/docs/contributing/limited-use-license-faq/
 
