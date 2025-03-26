@@ -36,7 +36,8 @@ lazy val dependencies = Seq(
     Dependencies.circeGeneric,
     Dependencies.specs2,
     Dependencies.specs2CE,
-    Dependencies.badRows
+    Dependencies.badRows,
+    Dependencies.slf4jSimple
   )
 )
 
