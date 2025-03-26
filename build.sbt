@@ -23,7 +23,9 @@ lazy val buildSettings = Seq(
   ),
   Compile / unmanagedResources += file("LICENSE.md"),
   resolvers ++= Dependencies.resolvers,
-  Test / parallelExecution := false
+  Test / parallelExecution := false,
+  Test / javaOptions := Seq("-Dnashorn.args=--language=es6"),
+  Test / fork := true
 )
 
 lazy val dependencies = Seq(

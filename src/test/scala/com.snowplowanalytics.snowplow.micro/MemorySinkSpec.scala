@@ -10,14 +10,20 @@
 
 package com.snowplowanalytics.snowplow.micro
 
+import cats.implicits._
 import cats.effect.testing.specs2.CatsResource
 import cats.effect.{IO, Resource}
 import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.client.resolver.registries.{JavaNetRegistryLookup, Registry}
+import com.snowplowanalytics.iglu.core.{SchemaKey, SchemaVer}
 import com.snowplowanalytics.snowplow.badrows.Processor
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.JavascriptScriptEnrichment
+import com.snowplowanalytics.snowplow.enrich.common.utils.OptionIor
 import org.specs2.mutable.SpecificationLike
+
+import scala.io.Source
 
 class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike {
 
@@ -61,10 +67,9 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val raw = buildRawEvent()
       val withoutTimestamp = raw.copy(context = raw.context.copy(timestamp = None))
       val expected = "Error while validating the event"
-      sink.validateEvent(withoutTimestamp).value.map { result =>
-        result must beLeft.like {
-          case (errors, _) if errors.exists(_.contains(expected)) => ok
-          case errs => ko(s"$errs doesn't contain [$expected]")
+      sink.validateEvent(withoutTimestamp).value.map { 
+        _ must beLike {
+          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -73,10 +78,9 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val raw = buildRawEvent()
       val withoutEvent = raw.copy(parameters = raw.parameters - "e")
       val expected = "Error while validating the event"
-      sink.validateEvent(withoutEvent).value.map { result =>
-        result must beLeft.like {
-          case (errors, _) if errors.exists(_.contains(expected)) => ok
-          case errs => ko(s"$errs doesn't contain [$expected]")
+      sink.validateEvent(withoutEvent).value.map {
+        _ must beLike {
+          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -84,10 +88,9 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     "should fail for an invalid unstructured event" >> withResource { sink =>
       val raw = buildRawEvent(Some(buildUnstruct(sdjInvalid)))
       val expected = "Error while validating the event"
-      sink.validateEvent(raw).value.map { result =>
-        result must beLeft.like {
-          case (errors, _) if errors.exists(_.contains(expected)) => ok
-          case errs => ko(s"$errs doesn't contain [$expected]")
+      sink.validateEvent(raw).value.map {
+        _ must beLike {
+          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -95,10 +98,9 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     "should fail if the event has an invalid context" >> withResource { sink =>
       val raw = buildRawEvent(None, Some(buildContexts(List(sdjInvalid))))
       val expected = "Error while validating the event"
-      sink.validateEvent(raw).value.map { result =>
-        result must beLeft.like {
-          case (errors, _) if errors.exists(_.contains(expected)) => ok
-          case errs => ko(s"$errs doesn't contain [$expected]")
+      sink.validateEvent(raw).value.map {
+        _ must beLike {
+          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -106,10 +108,9 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     "should fail for a unstructured event with an unknown schema" >> withResource { sink =>
       val raw = buildRawEvent(Some(buildUnstruct(sdjDoesNotExist)))
       val expected = "Error while validating the event"
-      sink.validateEvent(raw).value.map { result =>
-        result must beLeft.like {
-          case (errors, _) if errors.exists(_.contains(expected)) => ok
-          case errs => ko(s"$errs doesn't contain [$expected]")
+      sink.validateEvent(raw).value.map {
+        _ must beLike {
+          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -117,10 +118,9 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     "should fail if the event has a context with an unknown schema" >> withResource { sink =>
       val raw = buildRawEvent(None, Some(buildContexts(List(sdjDoesNotExist))))
       val expected = "Error while validating the event"
-      sink.validateEvent(raw).value.map { result =>
-        result must beLeft.like {
-          case (errors, _) if errors.exists(_.contains(expected)) => ok
-          case errs => ko(s"$errs doesn't contain [$expected]")
+      sink.validateEvent(raw).value.map {
+        _ must beLike {
+          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -128,10 +128,9 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     "extract the type of an event" >> withResource { sink =>
       val raw = buildRawEvent()
       val expected = "page_ping"
-      sink.validateEvent(raw).value.map { result =>
-        result must beRight.like {
-          case GoodEvent(_, typE, _, _, _) if typE == Some(expected) => ok
-          case GoodEvent(_, typE, _, _, _) => ko(s"extracted type $typE isn't $expected")
+      sink.validateEvent(raw).value.map {
+        _ must beLike {
+          case OptionIor.Right(GoodEvent(_, typE, _, _, _)) if typE === Some(expected) => ok
         }
       }
     }
@@ -139,10 +138,9 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     "should extract the schema of an unstructured event" >> withResource { sink =>
       val raw = buildRawEvent(Some(buildUnstruct(sdjLinkClick)))
       val expected = schemaLinkClick
-      sink.validateEvent(raw).value.map { result =>
-        result must beRight.like {
-          case GoodEvent(_, _, schema, _, _) if schema == Some(expected) => ok
-          case GoodEvent(_, _, schema, _, _) => ko(s"extracted schema $schema isn't $expected")
+      sink.validateEvent(raw).value.map {
+        _ must beLike {
+          case OptionIor.Right(GoodEvent(_, _, schema, _, _)) if schema === Some(expected) => ok
         }
       }
     }
@@ -150,10 +148,18 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     "should extract the contexts of an event" >> withResource { sink =>
       val raw = buildRawEvent(None, Some(buildContexts(List(sdjLinkClick, sdjMobileContext))))
       val expected = List(schemaLinkClick, schemaMobileContext)
-      sink.validateEvent(raw).value.map { result =>
-        result must beRight.like {
-          case GoodEvent(_, _, _, contexts, _) if contexts == expected => ok
-          case GoodEvent(_, _, _, contexts, _) => ko(s"extracted contexts $contexts isn't $expected")
+      sink.validateEvent(raw).value.map {
+        _ must beLike {
+          case OptionIor.Right(GoodEvent(_, _, _, contexts, _)) if contexts === expected => ok
+        }
+      }
+    }
+
+    "should return nothing if the event is dropped by JS enrichment" >> withResource { sink =>
+      val raw = buildRawEvent(appId = "drop-all")
+      sink.validateEvent(raw).value.map {
+        _ must beLike {
+          case OptionIor.None => ok
         }
       }
     }
@@ -163,10 +169,16 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     for {
       enrichConfig <- Configuration.loadEnrichConfig().value.map(_.getOrElse(throw new IllegalArgumentException("Can't read defaults from Enrich config")))
       igluClient <- IgluCirceClient.fromResolver[IO](Resolver[IO](List(Registry.IgluCentral), None), 500, enrichConfig.maxJsonDepth)
-      enrichmentRegistry = new EnrichmentRegistry[IO]()
+      enrichmentRegistry = new EnrichmentRegistry[IO](javascriptScript = List(buildJSEnrichment()))
       processor = Processor(BuildInfo.name, BuildInfo.version)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
     } yield new MemorySink(igluClient, lookup, enrichmentRegistry, false, processor, enrichConfig)
+  }
+
+  private def buildJSEnrichment(): JavascriptScriptEnrichment = {
+    val js = Source.fromResource("js-enrichment.js").getLines().mkString("\n")
+    val key = SchemaKey("com.snowplowanalytics.snowplow", "javascript_script_config", "jsonschema", SchemaVer.Full(1, 0, 0))
+    JavascriptScriptEnrichment(key, js)
   }
 
 }
