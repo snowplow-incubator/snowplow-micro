@@ -67,12 +67,13 @@ object events {
   }
   """
 
-  def buildRawEvent(unstruct: Option[String] = None, contexts: Option[String] = None): RawEvent = {
+  def buildRawEvent(unstruct: Option[String] = None, contexts: Option[String] = None, appId: String = "shop"): RawEvent = {
     val collectorApi = Api("com.snowplowanalytics.snowplow", "tp2")
     var params = Map(
       "tv" -> "tracker v42",
       "p" -> "web",
-      "e" -> "pp"
+      "e" -> "pp",
+      "aid" -> appId
     )
 
     params = unstruct match {

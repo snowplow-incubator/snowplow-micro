@@ -10,7 +10,7 @@
 
 package com.snowplowanalytics.snowplow.micro
 
-import cats.data.{EitherT, Validated}
+import cats.data.{NonEmptyList, Validated}
 import cats.effect.IO
 import cats.implicits._
 import com.snowplowanalytics.iglu.client.IgluCirceClient
@@ -23,7 +23,7 @@ import com.snowplowanalytics.snowplow.enrich.common.EtlPipeline
 import com.snowplowanalytics.snowplow.enrich.common.adapters.{AdapterRegistry, RawEvent}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.{EnrichmentManager, EnrichmentRegistry}
 import com.snowplowanalytics.snowplow.enrich.common.loaders.ThriftLoader
-import com.snowplowanalytics.snowplow.enrich.common.utils.ConversionUtils
+import com.snowplowanalytics.snowplow.enrich.common.utils.{ConversionUtils, OptionIor, OptionIorT}
 import io.circe.syntax._
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
@@ -83,18 +83,19 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
                 val partitionEvents = rawEvents.toList.foldLeftM((Nil, Nil): (List[GoodEvent], List[BadEvent])) {
                   case ((good, bad), rawEvent) =>
                     validateEvent(rawEvent).value.map {
-                      case Right(goodEvent) =>
+                      case OptionIor.Right(goodEvent) =>
                         logger.info(s"GOOD ${formatEvent(goodEvent)}")
                         (goodEvent :: good, bad)
-                      case Left((errors, badRow)) =>
-                        val badEvent =
-                          BadEvent(
-                            Some(collectorPayload),
-                            Some(rawEvent),
-                            errors
-                          )
+                      case OptionIor.Both((errors, badRow), _) =>
+                        val badEvent = BadEvent(Some(collectorPayload), Some(rawEvent), errors)
                         logger.warn(s"BAD ${formatBadRow(badRow)}")
                         (good, badEvent :: bad)
+                      case OptionIor.Left((errors, badRow)) =>
+                        val badEvent = BadEvent(Some(collectorPayload), Some(rawEvent), errors)
+                        logger.warn(s"BAD ${formatBadRow(badRow)}")
+                        (good, badEvent :: bad)
+                      case OptionIor.None =>
+                        (good, bad)
                     }
                 }
                 partitionEvents.map {
@@ -128,7 +129,7 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
    * @return [[GoodEvent]] with the extracted event type, schema and contexts,
    *   or error if the event couldn't be validated.
    */
-  private[micro] def validateEvent(rawEvent: RawEvent): EitherT[IO, (List[String], BadRow), GoodEvent] =
+  private[micro] def validateEvent(rawEvent: RawEvent): OptionIorT[IO, (List[String], BadRow), GoodEvent] =
     EnrichmentManager.enrichEvent[IO](
         enrichmentRegistry,
         igluClient,
@@ -142,19 +143,25 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
         emitIncomplete = false,
         enrichConfig.maxJsonDepth
       )
-      .toEither
-      .subflatMap { enriched =>
-        EventConverter.fromEnriched(enriched)
-          .leftMap { failure =>
-            BadRow.LoaderParsingError(processor, failure, Payload.RawPayload(ConversionUtils.tabSeparatedEnrichedEvent(enriched)))
-          }
-          .toEither
+      .leftMap(NonEmptyList.one(_)) // Because the following `.flatMap requires a SemiGroup on the Left
+      .flatMap { enriched =>
+        val ior: OptionIor[NonEmptyList[BadRow], Event] = EventConverter.fromEnriched(enriched) match {
+          case Validated.Valid(converted) =>
+            OptionIor.Right(converted)
+          case Validated.Invalid(failure) =>
+            val badRow = BadRow.LoaderParsingError(processor, failure, Payload.RawPayload(ConversionUtils.tabSeparatedEnrichedEvent(enriched)))
+            OptionIor.Left(NonEmptyList.one(badRow))
+        }
+        OptionIorT(IO.pure(ior))
       }
-      .bimap(
-        badRow => (List("Error while validating the event.", badRow.compact), badRow),
-        enriched => GoodEvent(rawEvent, enriched.event, getEnrichedSchema(enriched), getEnrichedContexts(enriched), enriched)
-      )
-
+      .map { enriched =>
+        GoodEvent(rawEvent, enriched.event, getEnrichedSchema(enriched), getEnrichedContexts(enriched), enriched)
+      }
+      .leftMap { nel =>
+        // We can ignore the .tail of this non-emoty-list because we only expect a single bad row
+        val badRow = nel.head
+        (List("Error while validating the event.", badRow.compact), badRow)
+      }
 
   private def getEnrichedSchema(enriched: Event): Option[String] =
     List(enriched.event_vendor, enriched.event_name, enriched.event_format, enriched.event_version)
@@ -163,4 +170,5 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
 
   private def getEnrichedContexts(enriched: Event): List[String] =
     enriched.contexts.data.map(_.schema.toSchemaUri)
+
 }
