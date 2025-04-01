@@ -28,7 +28,7 @@ jobs:
 
     - name: Publish collector locally
       run: |
-        git clone --branch 3.3.0 --depth 1 https://github.com/snowplow/stream-collector.git
+        git clone --branch 3.4.0 --depth 1 https://github.com/snowplow/stream-collector.git
         cd stream-collector
         sbt +publishLocal
 
