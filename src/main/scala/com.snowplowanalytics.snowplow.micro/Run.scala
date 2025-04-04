@@ -67,10 +67,10 @@ object Run {
         config.collector.rootResponse.enabled,
         config.collector.crossDomain.enabled,
         collectorService
-      ).value
+      )
 
       miniRoutes = new Routing(config.iglu.resolver)(lookup).value
-      allRoutes = miniRoutes <+> collectorRoutes
+      allRoutes = miniRoutes <+> collectorRoutes.value <+> collectorRoutes.health
       _ <- MicroHttpServer.build(allRoutes, config, sslContext)
     } yield ()
   }
