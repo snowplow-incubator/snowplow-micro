@@ -29,6 +29,8 @@ import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import com.snowplowanalytics.snowplow.micro.Configuration.EnrichConfig
 
+import java.time.Instant
+
 /** Sink of the collector that Snowplow Micro is.
  * Contains the functions that are called for each tracking event sent
  * to the collector endpoint.
@@ -74,47 +76,40 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
    * A `CollectorPayload` can contain several events.
    */
   private[micro] def processThriftBytes(thriftBytes: Array[Byte]): IO[Unit] =
-    ThriftLoader.toCollectorPayload(thriftBytes, processor) match {
-      case Validated.Valid(maybePayload) =>
-        maybePayload match {
-          case Some(collectorPayload) =>
-            adapterRegistry.toRawEvents(collectorPayload, igluClient, processor, registryLookup, enrichConfig.maxJsonDepth).flatMap {
-              case Validated.Valid(rawEvents) =>
-                val partitionEvents = rawEvents.toList.foldLeftM((Nil, Nil): (List[GoodEvent], List[BadEvent])) {
-                  case ((good, bad), rawEvent) =>
-                    validateEvent(rawEvent).value.map {
-                      case OptionIor.Right(goodEvent) =>
-                        logger.info(s"GOOD ${formatEvent(goodEvent)}")
-                        (goodEvent :: good, bad)
-                      case OptionIor.Both((errors, badRow), _) =>
-                        val badEvent = BadEvent(Some(collectorPayload), Some(rawEvent), errors)
-                        logger.warn(s"BAD ${formatBadRow(badRow)}")
-                        (good, badEvent :: bad)
-                      case OptionIor.Left((errors, badRow)) =>
-                        val badEvent = BadEvent(Some(collectorPayload), Some(rawEvent), errors)
-                        logger.warn(s"BAD ${formatBadRow(badRow)}")
-                        (good, badEvent :: bad)
-                      case OptionIor.None =>
-                        (good, bad)
-                    }
+    ThriftLoader.toCollectorPayload(thriftBytes, processor, Instant.now()) match {
+      case Validated.Valid(collectorPayload) =>
+        adapterRegistry.toRawEvents(collectorPayload, igluClient, processor, registryLookup, enrichConfig.maxJsonDepth, Instant.now()).flatMap {
+          case Validated.Valid(rawEvents) =>
+            val partitionEvents = rawEvents.toList.foldLeftM((Nil, Nil): (List[GoodEvent], List[BadEvent])) {
+              case ((good, bad), rawEvent) =>
+                validateEvent(rawEvent).value.map {
+                  case OptionIor.Right(goodEvent) =>
+                    logger.info(s"GOOD ${formatEvent(goodEvent)}")
+                    (goodEvent :: good, bad)
+                  case OptionIor.Both((errors, badRow), _) =>
+                    val badEvent = BadEvent(Some(collectorPayload), Some(rawEvent), errors)
+                    logger.warn(s"BAD ${formatBadRow(badRow)}")
+                    (good, badEvent :: bad)
+                  case OptionIor.Left((errors, badRow)) =>
+                    val badEvent = BadEvent(Some(collectorPayload), Some(rawEvent), errors)
+                    logger.warn(s"BAD ${formatBadRow(badRow)}")
+                    (good, badEvent :: bad)
+                  case OptionIor.None =>
+                    (good, bad)
                 }
-                partitionEvents.map {
-                  case (goodEvents, badEvents) =>
-                    ValidationCache.addToGood(goodEvents)
-                    ValidationCache.addToBad(badEvents)
-                    if (outputEnrichedTsv) {
-                      goodEvents.foreach { event =>
-                        println(event.event.toTsv)
-                      }
-                    } else ()
-                }
-              case Validated.Invalid(badRow) =>
-                val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.compact))
-                logger.warn(s"BAD ${bad.errors.head}")
-                IO(ValidationCache.addToBad(List(bad)))
             }
-          case None =>
-            val bad = BadEvent(None, None, List("No payload."))
+            partitionEvents.map {
+              case (goodEvents, badEvents) =>
+                ValidationCache.addToGood(goodEvents)
+                ValidationCache.addToBad(badEvents)
+                if (outputEnrichedTsv) {
+                  goodEvents.foreach { event =>
+                    println(event.event.toTsv)
+                  }
+                } else ()
+            }
+          case Validated.Invalid(badRow) =>
+            val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.compact))
             logger.warn(s"BAD ${bad.errors.head}")
             IO(ValidationCache.addToBad(List(bad)))
         }
@@ -136,7 +131,7 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
         processor,
         DateTime.now(),
         rawEvent,
-        EtlPipeline.FeatureFlags(acceptInvalid = false, legacyEnrichmentOrder = false),
+        EtlPipeline.FeatureFlags(acceptInvalid = false),
         IO.unit,
         registryLookup,
         enrichConfig.validation.atomicFieldsLimits,

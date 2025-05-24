@@ -140,7 +140,7 @@ class EventConverterSpec extends Specification {
 
     "should correctly convert contexts" >> {
       val enriched = newValidEvent
-      enriched.contexts = """{
+      enriched.setContexts("""{
         "schema": "iglu:com.snowplowanalytics.snowplow/contexts/jsonschema/1-0-0",
         "data": [
           {
@@ -163,7 +163,7 @@ class EventConverterSpec extends Specification {
             }
           }
         ]
-      }"""
+      }""")
 
       val result = EventConverter.fromEnriched(enriched)
       result.toEither must beRight { e: Event =>
@@ -177,7 +177,7 @@ class EventConverterSpec extends Specification {
 
     "should correctly convert unstruct events" >> {
       val enriched = newValidEvent
-      enriched.unstruct_event = """{
+      enriched.setUnstruct_event("""{
           "schema": "iglu:com.snowplowanalytics.snowplow/unstruct_event/jsonschema/1-0-0",
           "data": {
             "schema": "iglu:com.snowplowanalytics.snowplow/link_click/jsonschema/1-0-1",
@@ -187,7 +187,7 @@ class EventConverterSpec extends Specification {
               "elementId": "exampleLink"
             }
           }
-      }"""
+      }""")
 
       val result = EventConverter.fromEnriched(enriched)
       result.toEither must beRight { e: Event =>

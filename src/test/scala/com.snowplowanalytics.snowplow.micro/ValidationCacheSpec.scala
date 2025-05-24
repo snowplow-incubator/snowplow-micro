@@ -11,6 +11,7 @@
 package com.snowplowanalytics.snowplow.micro
 
 import org.specs2.mutable.Specification
+import org.joda.time.DateTime
 
 import com.snowplowanalytics.snowplow.enrich.common.loaders.CollectorPayload
 import com.snowplowanalytics.snowplow.analytics.scalasdk.Event
@@ -300,6 +301,8 @@ object ValidationCacheSpec {
   val EmptyFilterGood: FiltersGood = FiltersGood(None, None, None, None)
   val EmptyFilterBad: FiltersBad = FiltersBad(None, None, None)
 
+  val testTimestamp = DateTime.parse("2014-01-16T00:49:58.278+00:00")
+
   def cacheOf(goodInit: List[GoodEvent], badInit: List[BadEvent]): ValidationCache =
     new ValidationCache {
       var good = goodInit
@@ -334,7 +337,7 @@ object ValidationCacheSpec {
       None,
       None,
       CollectorPayload.Source("name1", "utf-8", None),
-      CollectorPayload.Context(None, None, None, None, Nil, None)
+      CollectorPayload.Context(testTimestamp, None, None, None, Nil, None)
     )
 
   val CollectorPayload2: CollectorPayload =
@@ -344,7 +347,7 @@ object ValidationCacheSpec {
       None,
       None,
       CollectorPayload.Source("name2", "utf-8", None),
-      CollectorPayload.Context(None, None, None, None, Nil, None)
+      CollectorPayload.Context(testTimestamp, None, None, None, Nil, None)
     )
 
   val BadEvent1: BadEvent =

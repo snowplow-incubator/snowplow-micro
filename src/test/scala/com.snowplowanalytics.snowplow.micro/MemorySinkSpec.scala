@@ -13,6 +13,7 @@ package com.snowplowanalytics.snowplow.micro
 import cats.implicits._
 import cats.effect.testing.specs2.CatsResource
 import cats.effect.{IO, Resource}
+import io.circe.JsonObject
 import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.client.resolver.registries.{JavaNetRegistryLookup, Registry}
@@ -63,17 +64,6 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
   }
 
   "validateEvent" >> {
-    "should fail if the timestamp is not valid" >> withResource { sink =>
-      val raw = buildRawEvent()
-      val withoutTimestamp = raw.copy(context = raw.context.copy(timestamp = None))
-      val expected = "Error while validating the event"
-      sink.validateEvent(withoutTimestamp).value.map { 
-        _ must beLike {
-          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
-        }
-      }
-    }
-
     "should fail if the event type parameter is not set" >> withResource { sink =>
       val raw = buildRawEvent()
       val withoutEvent = raw.copy(parameters = raw.parameters - "e")
@@ -169,16 +159,20 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     for {
       enrichConfig <- Configuration.loadEnrichConfig().value.map(_.getOrElse(throw new IllegalArgumentException("Can't read defaults from Enrich config")))
       igluClient <- IgluCirceClient.fromResolver[IO](Resolver[IO](List(Registry.IgluCentral), None), 500, enrichConfig.maxJsonDepth)
-      enrichmentRegistry = new EnrichmentRegistry[IO](javascriptScript = List(buildJSEnrichment()))
+      jsEnrichment <- buildJSEnrichment()
+      enrichmentRegistry = new EnrichmentRegistry[IO](javascriptScript = List(jsEnrichment))
       processor = Processor(BuildInfo.name, BuildInfo.version)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
     } yield new MemorySink(igluClient, lookup, enrichmentRegistry, false, processor, enrichConfig)
   }
 
-  private def buildJSEnrichment(): JavascriptScriptEnrichment = {
+  private def buildJSEnrichment(): IO[JavascriptScriptEnrichment] = {
     val js = Source.fromResource("js-enrichment.js").getLines().mkString("\n")
     val key = SchemaKey("com.snowplowanalytics.snowplow", "javascript_script_config", "jsonschema", SchemaVer.Full(1, 0, 0))
-    JavascriptScriptEnrichment(key, js)
+    JavascriptScriptEnrichment.create(key, js, JsonObject(), false) match {
+      case Right(enrichment) => IO.pure(enrichment)
+      case Left(error) => IO.raiseError(new RuntimeException(error))
+    }
   }
 
 }
