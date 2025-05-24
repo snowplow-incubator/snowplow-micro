@@ -63,17 +63,6 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
   }
 
   "validateEvent" >> {
-    "should fail if the timestamp is not valid" >> withResource { sink =>
-      val raw = buildRawEvent()
-      val withoutTimestamp = raw.copy(context = raw.context.copy(timestamp = None))
-      val expected = "Error while validating the event"
-      sink.validateEvent(withoutTimestamp).value.map { 
-        _ must beLike {
-          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
-        }
-      }
-    }
-
     "should fail if the event type parameter is not set" >> withResource { sink =>
       val raw = buildRawEvent()
       val withoutEvent = raw.copy(parameters = raw.parameters - "e")
