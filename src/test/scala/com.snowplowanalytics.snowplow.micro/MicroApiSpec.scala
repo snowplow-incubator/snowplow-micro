@@ -22,6 +22,7 @@ import org.http4s.client.Client
 import org.http4s.implicits.http4sLiteralsSyntax
 import org.specs2.mutable.Specification
 import org.specs2.specification.BeforeAfterEach
+import org.http4s.client.middleware.{Retry, RetryPolicy}
 
 import scala.concurrent.duration.{Duration, DurationInt}
 
@@ -88,8 +89,27 @@ class MicroApiSpec extends Specification with CatsEffect with BeforeAfterEach {
   private def setup(): Resource[IO, Client[IO]] = {
     for {
       _ <- Main.run(List.empty).background
-      client <- BlazeClientBuilder.apply[IO].resource
-      _ <- Resource.sleep[IO](1.seconds)
+      client <- buildClient()
+      _ <- waitUntilHealthy(client)
     } yield client
+  }
+
+  private def buildClient(): Resource[IO, Client[IO]] = {
+    val retryPolicy = RetryPolicy[IO](
+      RetryPolicy.exponentialBackoff(2.seconds, 5),
+      { case (_, result) => RetryPolicy.isErrorOrRetriableStatus(result) }
+    )
+    BlazeClientBuilder.apply[IO].resource.map { client =>
+      Retry[IO](retryPolicy)(client)
+    }
+  }
+
+  private def waitUntilHealthy(client: Client[IO]): Resource[IO, Unit] = {
+    client.run(Request(GET, uri"http://localhost:9090/health"))
+      .flatMap { response =>
+        if (response.status.code != 200) 
+          Resource.raiseError[IO, Unit, Throwable](new RuntimeException("Micro is not healthy"))
+        else Resource.unit[IO]
+      }
   }
 }
