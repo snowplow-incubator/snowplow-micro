@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -25,6 +25,9 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 18
+
+    - name: Install sbt
+      uses: sbt/setup-sbt@v1
 
     - name: Publish collector locally
       run: |

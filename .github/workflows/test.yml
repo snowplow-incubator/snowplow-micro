@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   test:
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -15,6 +15,9 @@ jobs:
       with:
         java-version: 11
         distribution: adopt
+
+    - name: Install sbt
+      uses: sbt/setup-sbt@v1
 
     - name: Publish collector locally
       run: |
