@@ -92,7 +92,7 @@ object events {
       contentType = None,
       Source("Micro", "UTF-8", Some("localhost")),
       Context(
-        Some(DateTime.now()),
+        DateTime.now(),
         Some("0:0:0:0:0:0:0:1"),
         Some("curl/7.52.1"),
         None,

@@ -14,7 +14,7 @@ lazy val buildSettings = Seq(
   name := "snowplow-micro",
   organization := "com.snowplowanalytics.snowplow",
   description := "Standalone application to automate testing of trackers",
-  scalaVersion := "2.12.14",
+  scalaVersion := "2.12.20",
   scalacOptions := Settings.compilerOptions,
   javacOptions := Settings.javaCompilerOptions,
   Runtime / unmanagedClasspath ++= Seq(
@@ -75,7 +75,7 @@ lazy val dockerCommon = Seq(
 )
 
 lazy val microSettingsDistroless = dockerCommon ++ Seq(
-  dockerBaseImage := "gcr.io/distroless/java11-debian11:nonroot",
+  dockerBaseImage := "gcr.io/distroless/java21-debian12:nonroot",
   Docker / daemonUser := "nonroot",
   Docker / daemonGroup := "nonroot",
   dockerEntrypoint := Seq(
@@ -92,7 +92,7 @@ lazy val microSettingsDistroless = dockerCommon ++ Seq(
 )
 
 lazy val microSettings = dockerCommon ++ Seq(
-  dockerBaseImage := "eclipse-temurin:11",
+  dockerBaseImage := "eclipse-temurin:21",
   Docker / daemonUser := "daemon",
   scriptClasspath ++= Seq("/opt/snowplow/ui", "/config"),
   Universal / javaOptions ++= Seq("-Dnashorn.args=--language=es6"),
