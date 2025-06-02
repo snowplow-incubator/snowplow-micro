@@ -19,8 +19,9 @@ import com.snowplowanalytics.snowplow.badrows.Processor
 import com.snowplowanalytics.snowplow.collector.core._
 import com.snowplowanalytics.snowplow.collector.core.model.Sinks
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf}
-import com.snowplowanalytics.snowplow.enrich.common.utils.{HttpClient, ShiftExecution}
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf, IpLookupExecutionContext}
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.sqlquery.SqlExecutionContext
+import com.snowplowanalytics.snowplow.enrich.common.utils.HttpClient
 import com.snowplowanalytics.snowplow.micro.Configuration.MicroConfig
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
@@ -28,9 +29,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.io.File
 import java.security.{KeyStore, SecureRandom}
-import java.util.concurrent.Executors
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
-import scala.concurrent.ExecutionContext
 import scala.sys.process._
 
 object Run {
@@ -99,10 +98,10 @@ object Run {
   private def buildEnrichmentRegistry(configs: List[EnrichmentConf]): Resource[IO, EnrichmentRegistry[IO]] = {
     for {
       _ <- Resource.eval(downloadAssets(configs))
-      shift <- ShiftExecution.ofSingleThread[IO]
+      ipLookupEC <- IpLookupExecutionContext.mk[IO]
+      sqlEC <- SqlExecutionContext.mk[IO]
       httpClient <- EmberClientBuilder.default[IO].build.map(HttpClient.fromHttp4sClient[IO])
-      blockingEC = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool)
-      enrichmentRegistry <- Resource.eval(EnrichmentRegistry.build[IO](configs, shift, httpClient, blockingEC)
+      enrichmentRegistry <- Resource.eval(EnrichmentRegistry.build[IO](configs, httpClient, ipLookupEC, sqlEC, false)
         .leftMap(error => new IllegalArgumentException(s"can't build EnrichmentRegistry: $error"))
         .value.rethrow)
       _ <- Resource.eval {
