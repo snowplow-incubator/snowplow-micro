@@ -1,3 +1,9 @@
+Version 2.3.0 (2025-06-01)
+--------------------------
+Bump enrich to 5.4.0 (#159)
+Change github action runner to ubuntu-latest (#158)
+Bring back health endpoint (#157)
+
 Version 2.2.0 (2025-04-01)
 --------------------------
 Bump collector to 3.4.0
