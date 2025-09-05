@@ -62,8 +62,11 @@ object Settings {
   )
 
   lazy val assemblyOptions = Seq(
-    assembly / target := file("target/scala-2.12/assembled_jars/"),
-    assembly / assemblyJarName := { name.value + "-" + version.value + ".jar" },
+    assembly / assemblyOutputPath := {
+      val dir = crossTarget.value / "assembled_jars"
+      IO.createDirectory(dir)
+      dir / s"${name.value}-${version.value}.jar"
+    },
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", xs @ _*) => MergeStrategy.concat
       case PathList("META-INF", xs @ _*) => MergeStrategy.discard
