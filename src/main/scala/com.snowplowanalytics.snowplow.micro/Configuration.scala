@@ -90,7 +90,15 @@ object Configuration {
 
   private def loadCollectorConfig(path: Option[Path]): EitherT[IO, String, CollectorConfig[SinkConfig]] = {
     val resolveOrder = (config: TypesafeConfig) =>
-      namespaced(ConfigFactory.load(namespaced(config.withFallback(namespaced(ConfigFactory.parseResources("collector-micro.conf"))))))
+      namespaced(ConfigFactory.load(
+        namespaced(config.withFallback(
+          namespaced(ConfigFactory.parseResources("collector-micro.conf")
+            // collector-reference.conf only exists in fat jars
+            // in Docker or sbt run, the fallback is correctly placed in the Collector jar
+            .withFallback(ConfigFactory.parseResources("collector-reference.conf"))
+          )
+        ))
+      ))
 
     loadConfig[CollectorConfig[SinkConfig]](path, resolveOrder)
   }

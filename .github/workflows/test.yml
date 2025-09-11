@@ -28,3 +28,38 @@ jobs:
 
     - name: Run sbt
       run: sbt test
+
+    - name: Test fat jar assembly and execution
+      run: |
+        # Assemble fat jar
+        sbt 'project micro' clean assembly
+        
+        # Find the generated jar file in the correct location
+        JAR_FILE=$(find target/scala-2.12/assembled_jars -name "snowplow-micro-*" | head -n 1)
+        
+        if [ -z "$JAR_FILE" ]; then
+          echo "Error: No assembly jar found in target/scala-2.12/assembled_jars"
+          exit 1
+        fi
+        
+        echo "Found jar file: $JAR_FILE"
+        
+        # Start the application in background
+        timeout 30s java -jar "$JAR_FILE" > app_output.log 2>&1 &
+        APP_PID=$!
+        
+        # Wait a bit for startup
+        sleep 10
+        
+        # Check if the expected line appears in the output
+        if grep -q "started at http://\[::\]:9090/" app_output.log; then
+          echo "✅ Success: Found expected startup message"
+          kill $APP_PID 2>/dev/null || true
+          exit 0
+        else
+          echo "❌ Error: Expected startup message not found"
+          echo "Application output:"
+          cat app_output.log
+          kill $APP_PID 2>/dev/null || true
+          exit 1
+        fi

@@ -14,8 +14,8 @@ import sbt._
 import Keys._
 
 // SBT Assembly
-import sbtassembly._
-import sbtassembly.AssemblyKeys._
+import sbtassembly.AssemblyPlugin.autoImport._
+import sbtassembly.Assembly.Library
 
 // SBT DynVer
 import sbtdynver.DynVerPlugin.autoImport._
@@ -23,7 +23,6 @@ import sbtdynver.DynVerPlugin.autoImport._
 import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport._
 
 object Settings {
-
   lazy val licenseSettings = Seq(
     licenses += ("Snowplow Limited Use License Agreement", url("https://docs.snowplow.io/limited-use-license-1.1")),
     headerLicense := Some(HeaderLicense.Custom(
@@ -63,11 +62,20 @@ object Settings {
   )
 
   lazy val assemblyOptions = Seq(
-    assembly / target := file("target/scala-2.12/assembled_jars/"),
-    assembly / assemblyJarName := { name.value + "-" + version.value + ".jar" },
+    assembly / assemblyOutputPath := {
+      val dir = crossTarget.value / "assembled_jars"
+      IO.createDirectory(dir)
+      dir / s"${name.value}-${version.value}.jar"
+    },
     assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", "services", xs @ _*) => MergeStrategy.concat
       case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-      case "reference.conf" => MergeStrategy.concat
+      case "reference.conf" => CustomMergeStrategy.rename {
+        case dependency @ Library(module, _, _, _)
+          if module.jarName.startsWith("snowplow-stream-collector") =>
+          s"collector-${dependency.target}"
+        case dependency => dependency.target
+      }
       case x => MergeStrategy.first
     }
   )
