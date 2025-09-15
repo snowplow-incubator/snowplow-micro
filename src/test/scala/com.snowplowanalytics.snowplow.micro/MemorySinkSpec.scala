@@ -22,6 +22,7 @@ import com.snowplowanalytics.snowplow.badrows.Processor
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.JavascriptScriptEnrichment
 import com.snowplowanalytics.snowplow.enrich.common.utils.OptionIor
+import com.snowplowanalytics.snowplow.micro.Configuration.OutputFormat
 import org.specs2.mutable.SpecificationLike
 
 import scala.io.Source
@@ -163,7 +164,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       enrichmentRegistry = new EnrichmentRegistry[IO](javascriptScript = List(jsEnrichment))
       processor = Processor(BuildInfo.name, BuildInfo.version)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
-    } yield new MemorySink(igluClient, lookup, enrichmentRegistry, false, processor, enrichConfig)
+    } yield new MemorySink(igluClient, lookup, enrichmentRegistry, OutputFormat.None, processor, enrichConfig)
   }
 
   private def buildJSEnrichment(): IO[JavascriptScriptEnrichment] = {

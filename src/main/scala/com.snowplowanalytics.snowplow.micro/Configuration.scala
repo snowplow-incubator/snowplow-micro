@@ -38,14 +38,31 @@ import java.nio.file.{Path, Paths}
 
 object Configuration {
 
+  sealed trait OutputFormat
+  object OutputFormat {
+    case object None extends OutputFormat
+    case object Tsv extends OutputFormat
+    case object Json extends OutputFormat
+  }
+
   object Cli {
-    final case class Config(collector: Option[Path], iglu: Option[Path], outputEnrichedTsv: Boolean)
+    final case class Config(collector: Option[Path], iglu: Option[Path], outputFormat: OutputFormat)
 
     private val collector = Opts.option[Path]("collector-config", "Path to HOCON configuration (optional)", "c", "config.hocon").orNone
     private val iglu = Opts.option[Path]("iglu", "Configuration file for Iglu Client", "i", "iglu.json").orNone
-    private val outputEnrichedTsv = Opts.flag("output-tsv", "Print events in TSV format to standard output", "t").orFalse
+    private val outputTsv = Opts.flag("output-tsv", "Print events in TSV format to standard output", "t").orFalse
+    private val outputJson = Opts.flag("output-json", "Print events in JSON format to standard output (with a separate key for each schema)").orFalse
 
-    val config: Opts[Config] = (collector, iglu, outputEnrichedTsv).mapN(Config.apply)
+    private val outputFormat = (outputTsv, outputJson)
+      .mapN { (_, _) }
+      .mapValidated {
+        case (true, false) => OutputFormat.Tsv.validNel[String]
+        case (false, true) => OutputFormat.Json.validNel[String]
+        case (false, false) => OutputFormat.None.validNel[String]
+        case (true, true) => "Cannot specify both --output-tsv and --output-json".invalidNel[OutputFormat]
+      }
+
+    val config: Opts[Config] = (collector, iglu, outputFormat).mapN(Config.apply)
   }
 
 
@@ -64,7 +81,7 @@ object Configuration {
                                iglu: IgluResources,
                                enrichmentsConfig: List[EnrichmentConf],
                                enrichConfig: EnrichConfig,
-                               outputEnrichedTsv: Boolean)
+                               outputFormat: OutputFormat)
 
   final case class EnrichValidation(atomicFieldsLimits: AtomicFields)
   final case class EnrichConfig(
@@ -84,7 +101,7 @@ object Configuration {
         enrichConfig <- loadEnrichConfig()
         igluResources <- loadIgluResources(cliConfig.iglu, enrichConfig.maxJsonDepth)
         enrichmentsConfig <- loadEnrichmentConfig(igluResources.client)
-      } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, enrichConfig, cliConfig.outputEnrichedTsv)
+      } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, enrichConfig, cliConfig.outputFormat)
     }
   }
 
