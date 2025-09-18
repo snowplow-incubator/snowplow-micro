@@ -13,7 +13,7 @@ package com.snowplowanalytics.snowplow.micro
 import cats.effect.IO
 import cats.effect.testing.specs2.CatsEffect
 import com.monovore.decline.Command
-import com.snowplowanalytics.snowplow.micro.Configuration.MicroConfig
+import com.snowplowanalytics.snowplow.micro.Configuration.{MicroConfig, OutputFormat}
 import org.specs2.mutable.Specification
 
 class ConfigHelperSpec extends Specification with CatsEffect {
@@ -30,7 +30,7 @@ class ConfigHelperSpec extends Specification with CatsEffect {
               config.enrichmentsConfig.isEmpty must beTrue
               config.iglu.resolver.repos.map(_.config.name) must containTheSameElementsAs(List("Iglu Central", "Iglu Central - Mirror 01"))
               
-              config.outputEnrichedTsv must beFalse
+              config.outputFormat must beEqualTo(OutputFormat.None)
           }
         }
     }

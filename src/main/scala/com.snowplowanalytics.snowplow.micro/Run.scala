@@ -55,7 +55,7 @@ object Run {
       enrichmentRegistry <- buildEnrichmentRegistry(config.enrichmentsConfig)
       badProcessor = Processor(BuildInfo.name, BuildInfo.version)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
-      sink = new MemorySink(config.iglu.client, lookup, enrichmentRegistry, config.outputEnrichedTsv, badProcessor, config.enrichConfig)
+      sink = new MemorySink(config.iglu.client, lookup, enrichmentRegistry, config.outputFormat, badProcessor, config.enrichConfig)
       collectorService = new Service[IO](
         config.collector,
         Sinks(sink, sink),

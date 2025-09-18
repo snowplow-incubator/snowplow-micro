@@ -27,7 +27,7 @@ import com.snowplowanalytics.snowplow.enrich.common.utils.{ConversionUtils, Opti
 import io.circe.syntax._
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
-import com.snowplowanalytics.snowplow.micro.Configuration.EnrichConfig
+import com.snowplowanalytics.snowplow.micro.Configuration.{EnrichConfig, OutputFormat}
 
 import java.time.Instant
 
@@ -41,7 +41,7 @@ import java.time.Instant
 final class MemorySink(igluClient: IgluCirceClient[IO],
                        registryLookup: RegistryLookup[IO],
                        enrichmentRegistry: EnrichmentRegistry[IO],
-                       outputEnrichedTsv: Boolean,
+                       outputFormat: OutputFormat,
                        processor: Processor,
                        enrichConfig: EnrichConfig) extends Sink[IO] {
   override val maxBytes = Int.MaxValue
@@ -102,11 +102,17 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
               case (goodEvents, badEvents) =>
                 ValidationCache.addToGood(goodEvents)
                 ValidationCache.addToBad(badEvents)
-                if (outputEnrichedTsv) {
-                  goodEvents.foreach { event =>
-                    println(event.event.toTsv)
-                  }
-                } else ()
+                outputFormat match {
+                  case OutputFormat.Tsv =>
+                    goodEvents.foreach { event =>
+                      println(event.event.toTsv)
+                    }
+                  case OutputFormat.Json =>
+                    goodEvents.foreach { event =>
+                      println(event.event.toJson(lossy = true).noSpaces)
+                    }
+                  case OutputFormat.None => ()
+                }
             }
           case Validated.Invalid(badRow) =>
             val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.compact))
