@@ -13,7 +13,7 @@ package com.snowplowanalytics.snowplow.micro
 import cats.data.EitherT
 import cats.effect.IO
 import cats.implicits._
-import com.monovore.decline.Opts
+import com.monovore.decline.{Argument, Opts}
 import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
 import com.snowplowanalytics.iglu.client.resolver.Resolver.ResolverConfig
@@ -35,6 +35,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.net.URI
 import java.nio.file.{Path, Paths}
+import org.http4s.Uri
 
 object Configuration {
 
@@ -46,23 +47,31 @@ object Configuration {
   }
 
   object Cli {
-    final case class Config(collector: Option[Path], iglu: Option[Path], outputFormat: OutputFormat)
+    implicit val uriArgument: Argument[Uri] = Argument.from("uri") { str =>
+      Uri.fromString(str).leftMap(_ => s"Invalid URI: $str").toValidatedNel
+    }
+
+    final case class Config(collector: Option[Path], iglu: Option[Path], outputFormat: OutputFormat, destination: Option[Uri])
 
     private val collector = Opts.option[Path]("collector-config", "Path to HOCON configuration (optional)", "c", "config.hocon").orNone
-    private val iglu = Opts.option[Path]("iglu", "Configuration file for Iglu Client", "i", "iglu.json").orNone
-    private val outputTsv = Opts.flag("output-tsv", "Print events in TSV format to standard output", "t").orFalse
-    private val outputJson = Opts.flag("output-json", "Print events in JSON format to standard output (with a separate key for each schema)").orFalse
+    private val iglu = Opts.option[Path]("iglu", "Configuration file for Iglu Client (optional)", "i", "iglu.json").orNone
+    private val outputTsv = Opts.flag("output-tsv", "Output events in TSV format to standard output or HTTP destination", "t").orFalse
+    private val outputJson = Opts.flag("output-json", "Output events in JSON format to standard output or HTTP destination (with a separate key for each schema)", "j").orFalse
+    private val destination = Opts.option[Uri]("destination", "HTTP(s) URL to send output data to (requires --output-json or --output-tsv)", "d").orNone
 
-    private val outputFormat = (outputTsv, outputJson)
-      .mapN { (_, _) }
+    private val output = (outputTsv, outputJson, destination)
+      .mapN { (_, _, _) }
       .mapValidated {
-        case (true, false) => OutputFormat.Tsv.validNel[String]
-        case (false, true) => OutputFormat.Json.validNel[String]
-        case (false, false) => OutputFormat.None.validNel[String]
-        case (true, true) => "Cannot specify both --output-tsv and --output-json".invalidNel[OutputFormat]
+        case (true, false, d) => (OutputFormat.Tsv, d).validNel[String]
+        case (false, true, d) => (OutputFormat.Json, d).validNel[String]
+        case (false, false, None) => (OutputFormat.None, None).validNel[String]
+        case (false, false, Some(_)) => "--destination requires either --output-tsv or --output-json".invalidNel[(OutputFormat, Option[Uri])]
+        case (true, true, _) => "Cannot specify both --output-tsv and --output-json".invalidNel[(OutputFormat, Option[Uri])]
       }
 
-    val config: Opts[Config] = (collector, iglu, outputFormat).mapN(Config.apply)
+    val config: Opts[Config] = (collector, iglu, output).mapN {
+      case (c, i, (f, d)) => Config(c, i, f, d)
+    }
   }
 
 
@@ -81,7 +90,8 @@ object Configuration {
                                iglu: IgluResources,
                                enrichmentsConfig: List[EnrichmentConf],
                                enrichConfig: EnrichConfig,
-                               outputFormat: OutputFormat)
+                               outputFormat: OutputFormat,
+                               destination: Option[Uri])
 
   final case class EnrichValidation(atomicFieldsLimits: AtomicFields)
   final case class EnrichConfig(
@@ -101,7 +111,7 @@ object Configuration {
         enrichConfig <- loadEnrichConfig()
         igluResources <- loadIgluResources(cliConfig.iglu, enrichConfig.maxJsonDepth)
         enrichmentsConfig <- loadEnrichmentConfig(igluResources.client)
-      } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, enrichConfig, cliConfig.outputFormat)
+      } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, enrichConfig, cliConfig.outputFormat, cliConfig.destination)
     }
   }
 

@@ -28,6 +28,10 @@ import io.circe.syntax._
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import com.snowplowanalytics.snowplow.micro.Configuration.{EnrichConfig, OutputFormat}
+import org.http4s.client.Client
+import org.http4s.{Method, Request, Uri}
+import org.http4s.headers.`Content-Type`
+import org.http4s.MediaType
 
 import java.time.Instant
 
@@ -42,8 +46,10 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
                        registryLookup: RegistryLookup[IO],
                        enrichmentRegistry: EnrichmentRegistry[IO],
                        outputFormat: OutputFormat,
+                       destination: Option[Uri],
                        processor: Processor,
-                       enrichConfig: EnrichConfig) extends Sink[IO] {
+                       enrichConfig: EnrichConfig,
+                       httpClient: Client[IO]) extends Sink[IO] {
   override val maxBytes = Int.MaxValue
   private lazy val logger = LoggerFactory.getLogger("EventLog")
 
@@ -98,21 +104,11 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
                     (good, bad)
                 }
             }
-            partitionEvents.map {
+            partitionEvents.flatMap {
               case (goodEvents, badEvents) =>
                 ValidationCache.addToGood(goodEvents)
                 ValidationCache.addToBad(badEvents)
-                outputFormat match {
-                  case OutputFormat.Tsv =>
-                    goodEvents.foreach { event =>
-                      println(event.event.toTsv)
-                    }
-                  case OutputFormat.Json =>
-                    goodEvents.foreach { event =>
-                      println(event.event.toJson(lossy = true).noSpaces)
-                    }
-                  case OutputFormat.None => ()
-                }
+                sendOutput(goodEvents)
             }
           case Validated.Invalid(badRow) =>
             val bad = BadEvent(Some(collectorPayload), None, List("Error while extracting event(s) from collector payload and validating it/them.", badRow.compact))
@@ -171,5 +167,45 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
 
   private def getEnrichedContexts(enriched: Event): List[String] =
     enriched.contexts.data.map(_.schema.toSchemaUri)
+
+  private def sendOutput(goodEvents: List[GoodEvent]): IO[Unit] = {
+    if (goodEvents.nonEmpty) {
+      (outputFormat, destination) match {
+        case (OutputFormat.Tsv, Some(uri)) =>
+          val tsvData = goodEvents.map(_.event.toTsv).mkString("\n")
+          sendHttpRequest(uri, tsvData, MediaType.text.`tab-separated-values`)
+        case (OutputFormat.Json, Some(uri)) =>
+          val jsonData = goodEvents.map(_.event.toJson(lossy = true).noSpaces).mkString("\n")
+          sendHttpRequest(uri, jsonData, MediaType.application.json)
+        case (OutputFormat.Tsv, None) =>
+          IO {
+            goodEvents.foreach { event =>
+              println(event.event.toTsv)
+            }
+          }
+        case (OutputFormat.Json, None) =>
+          IO {
+            goodEvents.foreach { event =>
+              println(event.event.toJson(lossy = true).noSpaces)
+            }
+          }
+        case (OutputFormat.None, _) => IO.unit
+      }
+    } else {
+      IO.unit
+    }
+  }
+
+  private def sendHttpRequest(uri: Uri, data: String, mediaType: MediaType): IO[Unit] = {
+    val request = Request[IO](
+      method = Method.POST,
+      uri = uri,
+      headers = org.http4s.Headers(`Content-Type`(mediaType))
+    ).withEntity(data)
+
+    httpClient.run(request).use(_ => IO.unit).handleErrorWith { error =>
+      IO(logger.warn(s"Failed to send data to destination $uri: ${error.getMessage}"))
+    }
+  }
 
 }

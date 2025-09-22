@@ -13,6 +13,7 @@ package com.snowplowanalytics.snowplow.micro
 import cats.implicits._
 import cats.effect.testing.specs2.CatsResource
 import cats.effect.{IO, Resource}
+import org.http4s.ember.client.EmberClientBuilder
 import io.circe.JsonObject
 import com.snowplowanalytics.iglu.client.IgluCirceClient
 import com.snowplowanalytics.iglu.client.resolver.Resolver
@@ -31,7 +32,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
 
   import events._
 
-  override val resource: Resource[IO, MemorySink] = Resource.eval(createSink())
+  override val resource: Resource[IO, MemorySink] = createSink()
 
   sequential
 
@@ -156,15 +157,16 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
     }
   }
 
-  private def createSink(): IO[MemorySink] = {
+  private def createSink(): Resource[IO, MemorySink] = {
     for {
-      enrichConfig <- Configuration.loadEnrichConfig().value.map(_.getOrElse(throw new IllegalArgumentException("Can't read defaults from Enrich config")))
-      igluClient <- IgluCirceClient.fromResolver[IO](Resolver[IO](List(Registry.IgluCentral), None), 500, enrichConfig.maxJsonDepth)
-      jsEnrichment <- buildJSEnrichment()
+      enrichConfig <- Resource.eval(Configuration.loadEnrichConfig().value.map(_.getOrElse(throw new IllegalArgumentException("Can't read defaults from Enrich config"))))
+      igluClient <- Resource.eval(IgluCirceClient.fromResolver[IO](Resolver[IO](List(Registry.IgluCentral), None), 500, enrichConfig.maxJsonDepth))
+      jsEnrichment <- Resource.eval(buildJSEnrichment())
       enrichmentRegistry = new EnrichmentRegistry[IO](javascriptScript = List(jsEnrichment))
       processor = Processor(BuildInfo.name, BuildInfo.version)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
-    } yield new MemorySink(igluClient, lookup, enrichmentRegistry, OutputFormat.None, processor, enrichConfig)
+      httpClient <- EmberClientBuilder.default[IO].build
+    } yield new MemorySink(igluClient, lookup, enrichmentRegistry, OutputFormat.None, None, processor, enrichConfig, httpClient)
   }
 
   private def buildJSEnrichment(): IO[JavascriptScriptEnrichment] = {

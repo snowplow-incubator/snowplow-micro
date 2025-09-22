@@ -24,6 +24,7 @@ import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.sqlquer
 import com.snowplowanalytics.snowplow.enrich.common.utils.HttpClient
 import com.snowplowanalytics.snowplow.micro.Configuration.MicroConfig
 import org.http4s.ember.client.EmberClientBuilder
+import org.http4s.client.Client
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
@@ -52,10 +53,11 @@ object Run {
   private def buildEnvironment(config: MicroConfig): Resource[IO, Unit] = {
     for {
       sslContext <- Resource.eval(setupSSLContext())
-      enrichmentRegistry <- buildEnrichmentRegistry(config.enrichmentsConfig)
+      httpClient <- EmberClientBuilder.default[IO].build
+      enrichmentRegistry <- buildEnrichmentRegistry(config.enrichmentsConfig, httpClient)
       badProcessor = Processor(BuildInfo.name, BuildInfo.version)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
-      sink = new MemorySink(config.iglu.client, lookup, enrichmentRegistry, config.outputFormat, badProcessor, config.enrichConfig)
+      sink = new MemorySink(config.iglu.client, lookup, enrichmentRegistry, config.outputFormat, config.destination, badProcessor, config.enrichConfig, httpClient)
       collectorService = new Service[IO](
         config.collector,
         Sinks(sink, sink),
@@ -95,13 +97,13 @@ object Run {
     }
   }
 
-  private def buildEnrichmentRegistry(configs: List[EnrichmentConf]): Resource[IO, EnrichmentRegistry[IO]] = {
+  private def buildEnrichmentRegistry(configs: List[EnrichmentConf], httpClient: Client[IO]): Resource[IO, EnrichmentRegistry[IO]] = {
     for {
       _ <- Resource.eval(downloadAssets(configs))
       ipLookupEC <- IpLookupExecutionContext.mk[IO]
       sqlEC <- SqlExecutionContext.mk[IO]
-      httpClient <- EmberClientBuilder.default[IO].build.map(HttpClient.fromHttp4sClient[IO])
-      enrichmentRegistry <- Resource.eval(EnrichmentRegistry.build[IO](configs, httpClient, ipLookupEC, sqlEC, false)
+      enrichHttpClient = HttpClient.fromHttp4sClient[IO](httpClient)
+      enrichmentRegistry <- Resource.eval(EnrichmentRegistry.build[IO](configs, enrichHttpClient, ipLookupEC, sqlEC, false)
         .leftMap(error => new IllegalArgumentException(s"can't build EnrichmentRegistry: $error"))
         .value.rethrow)
       _ <- Resource.eval {
