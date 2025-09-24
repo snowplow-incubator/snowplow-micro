@@ -39,7 +39,8 @@ sbt test
 To build a Docker image for local testing:
 ```
 cd ui
-npm build && cd ..
+npm install
+npm run build && cd ..
 sbt docker:publishLocal
 ```
 

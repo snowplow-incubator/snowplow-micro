@@ -72,8 +72,6 @@ final class Routing(igluResolver: Resolver[IO])
     path match {
       case Path.empty / "ui" | Path.empty / "ui" / "/" =>
         resource("ui/index.html")
-      case Path.empty / "ui" / "errors" =>
-        resource("ui/errors.html")
       case other =>
         resource(other.renderString)
     }

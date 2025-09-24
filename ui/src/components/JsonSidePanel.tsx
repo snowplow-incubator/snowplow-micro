@@ -1,0 +1,45 @@
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { JsonViewer } from '@/components/JsonViewer';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { TruncatedColumnName } from '@/components/TruncatedColumnName';
+
+type JsonSidePanelProps = {
+  value: any;
+  title: string;
+  onClose: () => void;
+  maxDepth?: number;
+}
+
+export function JsonSidePanel({ value, title, onClose, maxDepth }: JsonSidePanelProps) {
+  return (
+    <TooltipProvider>
+      <div className="w-96 min-w-[500px] flex-shrink-0 border-l bg-background h-full overflow-hidden flex flex-col">
+      {/* Header with title and close button */}
+      <div className="border-b bg-background p-4">
+        <div className="flex items-center justify-between">
+          <TruncatedColumnName
+            columnName={title}
+            limit={60}
+            iconSize="md"
+            className="text-lg font-light truncate"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0 cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+        {/* JSON content */}
+        <div className="flex-1 overflow-y-auto p-2">
+          <JsonViewer data={value} maxDepth={maxDepth}/>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
