@@ -32,6 +32,7 @@ lazy val dependencies = Seq(
   libraryDependencies ++= Seq(
     Dependencies.snowplowStreamCollector,
     Dependencies.snowplowCommonEnrich,
+    Dependencies.snowplowAnalyticsSdk,
     Dependencies.decline,
     Dependencies.http4sCirce,
     Dependencies.circeJawn,

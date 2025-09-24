@@ -94,10 +94,10 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
                   case OptionIor.Right(goodEvent) =>
                     logger.info(s"GOOD ${formatEvent(goodEvent)}")
                     (goodEvent :: good, bad)
-                  case OptionIor.Both((errors, badRow), _) =>
+                  case OptionIor.Both((errors, badRow), goodEvent) =>
                     val badEvent = BadEvent(Some(collectorPayload), Some(rawEvent), errors)
                     logger.warn(s"BAD ${formatBadRow(badRow)}")
-                    (good, badEvent :: bad)
+                    (goodEvent.copy(incomplete = true) :: good, badEvent :: bad)
                   case OptionIor.Left((errors, badRow)) =>
                     val badEvent = BadEvent(Some(collectorPayload), Some(rawEvent), errors)
                     logger.warn(s"BAD ${formatBadRow(badRow)}")
@@ -139,7 +139,7 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
         IO.unit,
         registryLookup,
         enrichConfig.validation.atomicFieldsLimits,
-        emitIncomplete = false,
+        emitIncomplete = true,
         enrichConfig.maxJsonDepth
       )
       .leftMap(NonEmptyList.one(_)) // Because the following `.flatMap requires a SemiGroup on the Left

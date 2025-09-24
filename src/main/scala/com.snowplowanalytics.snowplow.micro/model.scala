@@ -20,7 +20,8 @@ private [micro] final case class GoodEvent(
   eventType: Option[String],
   schema: Option[String],
   contexts: List[String],
-  event: Event
+  event: Event,
+  incomplete: Boolean = false
 )
 
 /** A list of this case class is returned when /micro/bad is queried. */

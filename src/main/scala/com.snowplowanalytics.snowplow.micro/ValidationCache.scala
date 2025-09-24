@@ -26,7 +26,7 @@ private[micro] trait ValidationCache {
   /** Compute a summary with the number of good and bad events currently in cache. */
   private[micro] def getSummary(): ValidationSummary = {
     val nbGood = LockGood.synchronized {
-      good.size
+      good.filterNot(_.incomplete).size
     }
     val nbBad = LockBad.synchronized {
       bad.size
@@ -61,9 +61,13 @@ private[micro] trait ValidationCache {
     filtersGood: FiltersGood = FiltersGood(None, None, None, None)
   ): List[GoodEvent] =
     LockGood.synchronized {
-      val filtered = good.filter(keepGoodEvent(_, filtersGood))
+      val filtered = good.filterNot(_.incomplete).filter(keepGoodEvent(_, filtersGood))
       filtered.take(filtersGood.limit.getOrElse(filtered.size))
     }
+
+  /** Get all good + incomplete events */
+  private[micro] def getGoodAndIncomplete: List[GoodEvent] =
+    LockGood.synchronized(good)
 
   /** Filter out the bad events with the possible filters contained in the HTTP request. */
   private[micro] def filterBad(
