@@ -44,7 +44,7 @@ lazy val dependencies = Seq(
 )
 
 lazy val buildInfoSettings = Seq(
-  buildInfoKeys := Seq[BuildInfoKey](name, moduleName, dockerAlias, version, "shortName" -> "micro-ssc"),
+  buildInfoKeys := Seq[BuildInfoKey](name, moduleName, dockerAlias, version, "sinkName" -> "micro-ssc"),
   buildInfoPackage := "com.snowplowanalytics.snowplow.micro",
   buildInfoOptions += BuildInfoOption.Traits("com.snowplowanalytics.snowplow.collector.core.AppInfo")
 )

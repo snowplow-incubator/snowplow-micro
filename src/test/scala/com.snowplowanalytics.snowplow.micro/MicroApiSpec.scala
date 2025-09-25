@@ -39,6 +39,7 @@ class MicroApiSpec extends Specification with CatsEffect with BeforeAfterEach {
     setup().use { client =>
       for {
         _ <- client.run(Request(GET, uri"http://localhost:9090/i?e=pp&p=web&tv=lol")).use_
+        _ <- IO.sleep(1.seconds)
         all <- client.run(Request(GET, uri"http://localhost:9090/micro/all")).use(_.as[Json])
         good <- client.run(Request(GET, uri"http://localhost:9090/micro/good")).use(_.as[Json])
       } yield {
@@ -60,6 +61,7 @@ class MicroApiSpec extends Specification with CatsEffect with BeforeAfterEach {
     setup().use { client =>
       for {
         _ <- client.run(Request(GET, uri"http://localhost:9090/i?e=pp&p=web&tv=lol&eid=invalidEventId")).use_
+        _ <- IO.sleep(1.seconds)
         all <- client.run(Request(GET, uri"http://localhost:9090/micro/all")).use(_.as[Json])
         bad <- client.run(Request(GET, uri"http://localhost:9090/micro/bad")).use(_.as[Json])
       } yield {
@@ -76,6 +78,7 @@ class MicroApiSpec extends Specification with CatsEffect with BeforeAfterEach {
       for {
         _ <- client.run(Request(GET, uri"http://localhost:9090/i?e=pp&p=web&tv=lol")).use_
         _ <- client.run(Request(GET, uri"http://localhost:9090/i?e=pp&p=web&tv=lol&eid=invalidEventId")).use_
+        _ <- IO.sleep(1.seconds)
         beforeReset <- client.run(Request(GET, uri"http://localhost:9090/micro/all")).use(_.as[Json])
         afterReset <- client.run(Request(GET, uri"http://localhost:9090/micro/reset")).use(_.as[Json])
       } yield {

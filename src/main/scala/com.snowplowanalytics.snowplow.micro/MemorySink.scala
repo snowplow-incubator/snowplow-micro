@@ -57,7 +57,9 @@ final class MemorySink(igluClient: IgluCirceClient[IO],
 
   override def isHealthy: IO[Boolean] = IO.pure(true)
 
-  override def storeRawEvents(events: List[Array[Byte]], key: String): IO[Unit] = {
+  override def targetBytes: IO[Int] = IO.pure(maxBytes)
+
+  override def storeRawEvents(events: List[Array[Byte]]): IO[Unit] = {
     events.traverse(bytes => processThriftBytes(bytes)).void
   }
 

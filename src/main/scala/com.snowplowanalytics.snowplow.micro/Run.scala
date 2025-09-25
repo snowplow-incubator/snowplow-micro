@@ -12,12 +12,14 @@ package com.snowplowanalytics.snowplow.micro
 
 import cats.data.EitherT
 import cats.effect.{ExitCode, IO, Resource}
+import cats.effect.std.Queue
 import cats.implicits._
 import com.monovore.decline.Opts
 import com.snowplowanalytics.iglu.client.resolver.registries.JavaNetRegistryLookup
 import com.snowplowanalytics.snowplow.badrows.Processor
 import com.snowplowanalytics.snowplow.collector.core._
-import com.snowplowanalytics.snowplow.collector.core.model.Sinks
+import com.snowplowanalytics.snowplow.collector.core.Sinks
+import com.snowplowanalytics.snowplow.collector.thrift.CollectorPayload
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.{Enrichment, EnrichmentConf, IpLookupExecutionContext}
 import com.snowplowanalytics.snowplow.enrich.common.enrichments.registry.sqlquery.SqlExecutionContext
@@ -57,17 +59,25 @@ object Run {
       enrichmentRegistry <- buildEnrichmentRegistry(config.enrichmentsConfig, httpClient)
       badProcessor = Processor(BuildInfo.name, BuildInfo.version)
       lookup = JavaNetRegistryLookup.ioLookupInstance[IO]
+      queue <- Resource.eval(Queue.unbounded[IO, CollectorPayload])
       sink = new MemorySink(config.iglu.client, lookup, enrichmentRegistry, config.outputFormat, config.destination, badProcessor, config.enrichConfig, httpClient)
+      sinks = Sinks(sink, sink)
+      _ <- Sinks
+        .dequeue(config.collector, BuildInfo, queue, sinks)
+        .compile
+        .drain
+        .background
       collectorService = new Service[IO](
         config.collector,
-        Sinks(sink, sink),
+        queue,
         BuildInfo
       )
       collectorRoutes = new Routes[IO](
         config.collector.enableDefaultRedirect,
         config.collector.rootResponse.enabled,
         config.collector.crossDomain.enabled,
-        collectorService
+        collectorService,
+        IO.pure(true)
       )
 
       miniRoutes = new Routing(config.iglu.resolver)(lookup).value
