@@ -1,3 +1,10 @@
+Version 2.4.0 (2025-09-26)
+--------------------------
+Add --output-json option for JSON event output (#164)
+Add HTTP output destination support for TSV and JSON formats (#166)
+Bump enrich to 6.1.2 (#167)
+Bump collector to 3.7.0 (#167)
+
 Version 2.3.1 (2025-09-15)
 --------------------------
 Bring back the jar version (#162)
