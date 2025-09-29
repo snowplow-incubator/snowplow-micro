@@ -51,13 +51,14 @@ object Configuration {
       Uri.fromString(str).leftMap(_ => s"Invalid URI: $str").toValidatedNel
     }
 
-    final case class Config(collector: Option[Path], iglu: Option[Path], outputFormat: OutputFormat, destination: Option[Uri])
+    final case class Config(collector: Option[Path], iglu: Option[Path], outputFormat: OutputFormat, destination: Option[Uri], yauaa: Boolean)
 
     private val collector = Opts.option[Path]("collector-config", "Path to HOCON configuration (optional)", "c", "config.hocon").orNone
     private val iglu = Opts.option[Path]("iglu", "Configuration file for Iglu Client (optional)", "i", "iglu.json").orNone
     private val outputTsv = Opts.flag("output-tsv", "Output events in TSV format to standard output or HTTP destination", "t").orFalse
     private val outputJson = Opts.flag("output-json", "Output events in JSON format to standard output or HTTP destination (with a separate key for each schema)", "j").orFalse
     private val destination = Opts.option[Uri]("destination", "HTTP(s) URL to send output data to (requires --output-json or --output-tsv)", "d").orNone
+    private val yauaa = Opts.flag("yauaa", "Enable YAUAA user agent enrichment").orFalse
 
     private val output = (outputTsv, outputJson, destination)
       .mapN { (_, _, _) }
@@ -69,8 +70,8 @@ object Configuration {
         case (true, true, _) => "Cannot specify both --output-tsv and --output-json".invalidNel[(OutputFormat, Option[Uri])]
       }
 
-    val config: Opts[Config] = (collector, iglu, output).mapN {
-      case (c, i, (f, d)) => Config(c, i, f, d)
+    val config: Opts[Config] = (collector, iglu, output, yauaa).mapN {
+      case (c, i, (f, d), y) => Config(c, i, f, d, y)
     }
   }
 
@@ -110,7 +111,7 @@ object Configuration {
         collectorConfig <- loadCollectorConfig(cliConfig.collector)
         enrichConfig <- loadEnrichConfig()
         igluResources <- loadIgluResources(cliConfig.iglu, enrichConfig.maxJsonDepth)
-        enrichmentsConfig <- loadEnrichmentConfig(igluResources.client)
+        enrichmentsConfig <- loadEnrichmentConfig(igluResources.client, cliConfig.yauaa)
       } yield MicroConfig(collectorConfig, igluResources, enrichmentsConfig, enrichConfig, cliConfig.outputFormat, cliConfig.destination)
     }
   }
@@ -138,18 +139,38 @@ object Configuration {
       .flatMap(resolverConfig => buildIgluResources(resolverConfig, maxJsonDepth))
   }
 
-  private def loadEnrichmentConfig(igluClient: IgluCirceClient[IO]): EitherT[IO, String, List[EnrichmentConf]] = {
-    Option(getClass.getResource("/enrichments")) match {
-      case Some(definedEnrichments) =>
-        val path = Paths.get(definedEnrichments.toURI)
-        for {
-          asJson <- loadEnrichmentsAsSDD(path, igluClient, fileType = ".json")
-          asHocon <- loadEnrichmentsAsSDD(path, igluClient, fileType = ".hocon")
-          asJSScripts <- loadJSScripts(path)
-        } yield asJson ::: asHocon ::: asJSScripts
-      case None =>
-        EitherT.rightT[IO, String](List.empty)
-    }
+  private def loadEnrichmentConfig(igluClient: IgluCirceClient[IO], enableYauaa: Boolean): EitherT[IO, String, List[EnrichmentConf]] = {
+    for {
+      userEnrichments <- Option(getClass.getResource("/enrichments")) match {
+        case Some(definedEnrichments) =>
+          val path = Paths.get(definedEnrichments.toURI)
+          for {
+            asJson <- loadEnrichmentsAsSDD(path, igluClient, fileType = ".json")
+            asHocon <- loadEnrichmentsAsSDD(path, igluClient, fileType = ".hocon")
+            asJSScripts <- loadJSScripts(path)
+          } yield asJson ::: asHocon ::: asJSScripts
+        case None =>
+          EitherT.rightT[IO, String](List.empty[EnrichmentConf])
+      }
+      enrichmentsWithYauaa = if (enableYauaa) {
+        val hasYauaa = userEnrichments.exists { conf =>
+          conf.schemaKey.vendor == "com.snowplowanalytics.snowplow.enrichments" &&
+          conf.schemaKey.name == "yauaa_enrichment_config"
+        }
+
+        if (hasYauaa) {
+          userEnrichments
+        } else {
+          val yauaaEnrichment = EnrichmentConf.YauaaConf(
+            schemaKey = SchemaKey("com.snowplowanalytics.snowplow.enrichments", "yauaa_enrichment_config", "jsonschema", SchemaVer.Full(1, 0, 0)),
+            cacheSize = None
+          )
+          userEnrichments :+ yauaaEnrichment
+        }
+      } else {
+        userEnrichments
+      }
+    } yield enrichmentsWithYauaa
   }
 
   def loadEnrichConfig(): EitherT[IO, String, EnrichConfig] = {
