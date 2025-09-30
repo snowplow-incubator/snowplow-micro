@@ -80,8 +80,6 @@ export function DataTable({
       selectedColumns,
       events,
       selectedCellId,
-      eventFilter,
-      onEventFilterChange,
       onJsonCellToggle,
       onReorderColumns
     )

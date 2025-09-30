@@ -125,12 +125,12 @@ export function EventsChart({
     const data = chartData[index]
     const minuteKey = new Date(data.timestamp).toISOString()
     if (selectedMinute === minuteKey) return 1.0
-    if (selectedMinute && selectedMinute !== minuteKey) return 0.4
+    if (selectedMinute && selectedMinute !== minuteKey) return 0.2
     return 0.8
   }
 
   return (
-    <div className="h-[100px] w-full rounded-md border">
+    <div className="h-[100px] w-full rounded-md border bg-background">
       <ChartContainer config={chartConfig} className="h-full w-full">
         <BarChart
           height={100}

@@ -40,8 +40,6 @@ export function generateColumns(
   selectedColumns: ColumnMetadata[],
   events: Event[],
   selectedCellId: string | null,
-  eventFilter: 'all' | 'valid' | 'failed',
-  onEventFilterChange: (filter: 'all' | 'valid' | 'failed') => void,
   onJsonCellToggle: (cellId: string, value: any, title: string) => void,
   onReorderColumns: (fromIndex: number, toIndex: number) => void
 ): ColumnDef<Event>[] {
