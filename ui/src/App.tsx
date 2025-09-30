@@ -269,7 +269,7 @@ function App() {
               </TooltipProvider>
             )}
             <Button
-              variant={showColumnSelector ? 'default' : 'outline'}
+              variant={showColumnSelector ? 'outlineActive' : 'outline'}
               size="sm"
               onClick={toggleColumnSelector}
             >
@@ -320,7 +320,7 @@ function App() {
               <span className="font-light">Loading events...</span>
             </div>
           ) : (
-            <div className="h-full p-4 min-w-0 flex flex-col gap-4">
+            <div className="h-full p-4 min-w-0 flex flex-1 flex-col gap-4">
               {/* Events Chart */}
               <EventsChart
                 events={events}

@@ -26,13 +26,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { generateColumns } from '@/utils/column-generation'
 import type { Event } from '@/services/api'
 import { type ColumnMetadata } from '@/utils/column-metadata'
 import { ColumnAutocomplete } from '@/components/ColumnAutocomplete'
+import { StatusDropdown } from '@/components/StatusDropdown'
 
 type DataTableProps = {
   events: Event[]
@@ -149,24 +149,10 @@ export function DataTable({
                       {headerGroup.headers.map((header) => (
                         <TableHead key={`${header.id}-filter`} className="p-2">
                           {header.column.columnDef.meta?.eventStatusFilter ? (
-                            <ToggleGroup
-                              type="single"
+                            <StatusDropdown
                               value={eventFilter}
-                              onValueChange={(value) =>
-                                value &&
-                                onEventFilterChange(value as 'all' | 'valid' | 'failed')
-                              }
-                              variant="outline"
-                              size="sm"
-                            >
-                              <ToggleGroupItem value="all">All</ToggleGroupItem>
-                              <ToggleGroupItem value="valid">
-                                <Check className="h-3 w-3 text-success-dark" />
-                              </ToggleGroupItem>
-                              <ToggleGroupItem value="failed">
-                                <X className="h-3 w-3 text-failure-dark" />
-                              </ToggleGroupItem>
-                            </ToggleGroup>
+                              onChange={onEventFilterChange}
+                            />
                           ) : header.column.getCanFilter() ? (
                             header.column.columnDef.meta?.useAutocomplete ? (
                               <ColumnAutocomplete

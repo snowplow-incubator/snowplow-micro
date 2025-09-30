@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { TruncatedColumnName } from '@/components/TruncatedColumnName'
@@ -165,11 +166,9 @@ export function ColumnSelector({
                   onClick={() => onToggleColumn(name)}
                 >
                   {/* Checkbox on the left */}
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selected.has(name)}
-                    onChange={() => onToggleColumn(name)}
-                    className="h-4 w-4 rounded border-muted-foreground cursor-pointer"
+                    onCheckedChange={() => onToggleColumn(name)}
                     onClick={(e) => e.stopPropagation()}
                   />
 

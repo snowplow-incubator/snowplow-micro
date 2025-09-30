@@ -55,7 +55,7 @@ export function ColumnAutocomplete({
             {filteredOptions.map((option, index) => (
               <div
                 key={option || `option-${index}`}
-                className="px-2 py-1.5 text-sm font-light cursor-pointer hover:bg-gray-100 rounded-sm"
+                className="px-2 py-1.5 text-xs font-light cursor-pointer hover:bg-gray-100 rounded-sm"
                 onMouseDown={(e) => {
                   e.preventDefault() // Prevent input blur
                   handleOptionSelect(option)
