@@ -45,7 +45,7 @@ export function ColumnAutocomplete({
           // Use setTimeout to allow clicking on dropdown items
           setTimeout(() => setOpen(false), 200)
         }}
-        className="h-8 text-xs font-light"
+        className="text-xs font-light"
         style={{ width: '100px' }}
       />
 

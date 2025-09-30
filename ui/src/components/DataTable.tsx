@@ -191,7 +191,7 @@ export function DataTable({
                                     value === '' ? undefined : value
                                   )
                                 }}
-                                className="h-8 text-xs font-light"
+                                className="text-xs font-light"
                                 style={{ width: '100px' }}
                               />
                             )

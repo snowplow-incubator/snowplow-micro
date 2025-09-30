@@ -20,9 +20,9 @@ export function JsonSidePanel({
 }: JsonSidePanelProps) {
   return (
     <TooltipProvider>
-      <div className="w-96 min-w-[400px] flex-shrink-0 border-l bg-background h-full overflow-hidden flex flex-col">
+      <div className="w-96 min-w-[400px] flex-shrink-0 border-l bg-background h-full overflow-hidden flex flex-col p-4 gap-4">
         {/* Header with title and close button */}
-        <div className="bg-background p-4">
+        <div className="bg-background">
           <div className="flex items-center justify-between">
             <TruncatedColumnName
               columnMetadata={createColumnMetadata(title)}
@@ -41,7 +41,7 @@ export function JsonSidePanel({
         </div>
 
         {/* JSON content */}
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto -ml-2">
           <JsonViewer data={value} maxDepth={maxDepth} />
         </div>
       </div>

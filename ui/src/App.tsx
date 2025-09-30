@@ -214,144 +214,138 @@ function App() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex h-screen min-w-0">
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <div className="border-b bg-background p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <img
-                  src="/micro/ui/logo.svg"
-                  alt="Snowplow Micro"
-                  className="h-8"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                {lastRefreshTime && (
-                  <span className="text-xs text-last-refreshed font-light">
-                    Last refreshed at {lastRefreshTime.toLocaleTimeString()}
-                  </span>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchEvents()}
-                  disabled={isLoading}
-                >
-                  <RefreshCw
-                    className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
-                  />
-                  Refresh
-                </Button>
-                {hasActiveFilters && (
-                  <TooltipProvider>
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={resetAllFilters}
-                        >
-                          <FilterX className="mr-2 h-4 w-4" />
-                          Reset filters
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div>
-                          <div className="font-medium">Active filters:</div>
-                          {getActiveFilters().map((filter, index) => (
-                            <div key={index} className="text-xs">
-                              • {filter}
-                            </div>
-                          ))}
+    <div className="flex flex-col h-screen min-w-0 bg-page-background">
+      {/* Header */}
+      <div className="border-b bg-background p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <img
+              src="/micro/ui/logo.svg"
+              alt="Snowplow Micro"
+              className="h-8"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            {lastRefreshTime && (
+              <span className="text-xs text-last-refreshed font-light">
+                Last refreshed at {lastRefreshTime.toLocaleTimeString()}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchEvents()}
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
+              Refresh
+            </Button>
+            {hasActiveFilters && (
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetAllFilters}
+                    >
+                      <FilterX className="mr-2 h-4 w-4" />
+                      Reset filters
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div>
+                      <div className="font-medium">Active filters:</div>
+                      {getActiveFilters().map((filter, index) => (
+                        <div key={index} className="text-xs">
+                          • {filter}
                         </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                <Button
-                  variant={showColumnSelector ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={toggleColumnSelector}
-                >
-                  <Columns3Cog className="mr-2 h-4 w-4" />
-                  Pick columns
-                </Button>
-                <div className="relative">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      setShowActionsMenu(!showActionsMenu)
-                    }}
-                    onBlur={() => setShowActionsMenu(false)}
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-
-                  {showActionsMenu && (
-                    <div className="absolute top-full right-0 z-50 mt-1 bg-white border rounded-md shadow-lg whitespace-nowrap">
-                      <div className="p-1">
-                        <button
-                          className="px-2 py-1 text-xs font-normal text-left hover:bg-gray-100 rounded-sm flex items-center gap-2"
-                          onMouseDown={(e) => {
-                            e.preventDefault() // Prevent button blur
-                            resetEvents()
-                            setShowActionsMenu(false)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-failure" />
-                          Delete all events
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                  )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <Button
+              variant={showColumnSelector ? 'default' : 'outline'}
+              size="sm"
+              onClick={toggleColumnSelector}
+            >
+              <Columns3Cog className="mr-2 h-4 w-4" />
+              Pick columns
+            </Button>
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setShowActionsMenu(!showActionsMenu)
+                }}
+                onBlur={() => setShowActionsMenu(false)}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+
+              {showActionsMenu && (
+                <div className="absolute top-full right-0 z-50 mt-1 bg-white border rounded-md shadow-lg whitespace-nowrap">
+                  <div className="p-1">
+                    <button
+                      className="px-2 py-1 text-xs font-normal text-left hover:bg-gray-100 rounded-sm flex items-center gap-2"
+                      onMouseDown={(e) => {
+                        e.preventDefault() // Prevent button blur
+                        resetEvents()
+                        setShowActionsMenu(false)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-failure" />
+                      Delete all events
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
-
-          {/* Main Content */}
-          <div className="flex-1 overflow-hidden min-w-0">
-            {/* Loading State */}
-            {isLoading && events.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                <span className="font-light">Loading events...</span>
-              </div>
-            ) : (
-              <div className="h-full p-4 min-w-0 flex flex-col">
-                {/* Events Chart */}
-                <div className="mb-4">
-                  <EventsChart
-                    events={events}
-                    selectedMinute={selectedMinute}
-                    onMinuteClick={setSelectedMinute}
-                  />
-                </div>
-
-                {/* Data Table */}
-                <div className="flex-1 min-h-0">
-                  <DataTable
-                    events={filteredEvents}
-                    selectedColumns={selectedColumns}
-                    selectedCellId={selectedCellId}
-                    columnFilters={columnFilters}
-                    setColumnFilters={setColumnFilters}
-                    eventFilter={eventFilter}
-                    onEventFilterChange={setEventFilter}
-                    onJsonCellToggle={toggleJsonPanel}
-                    onReorderColumns={reorderColumns}
-                    onRowClick={handleRowClick}
-                    selectedRowId={selectedRowId}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
         </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main Content */}
+          {/* Loading State */}
+          {isLoading && events.length === 0 ? (
+            <div className="flex items-center justify-center h-full w-full">
+              <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+              <span className="font-light">Loading events...</span>
+            </div>
+          ) : (
+            <div className="h-full p-4 min-w-0 flex flex-col gap-4">
+              {/* Events Chart */}
+              <EventsChart
+                events={events}
+                selectedMinute={selectedMinute}
+                onMinuteClick={setSelectedMinute}
+              />
+
+              {/* Data Table */}
+              <div className="flex-1 min-h-0">
+                <DataTable
+                  events={filteredEvents}
+                  selectedColumns={selectedColumns}
+                  selectedCellId={selectedCellId}
+                  columnFilters={columnFilters}
+                  setColumnFilters={setColumnFilters}
+                  eventFilter={eventFilter}
+                  onEventFilterChange={setEventFilter}
+                  onJsonCellToggle={toggleJsonPanel}
+                  onReorderColumns={reorderColumns}
+                  onRowClick={handleRowClick}
+                  selectedRowId={selectedRowId}
+                />
+              </div>
+            </div>
+          )}
 
         {/* Column Selector Sidebar */}
         {showColumnSelector && (

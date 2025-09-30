@@ -79,23 +79,21 @@ export function ColumnSelector({
 
   return (
     <TooltipProvider>
-      <div className="border-l bg-background h-full overflow-hidden flex flex-col">
+      <div className="border-l bg-background h-full overflow-hidden flex flex-col p-4 gap-4">
         {/* Header with title and close button */}
-        <div className="bg-background p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-light truncate">Columns</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <h2 className="text-lg font-light truncate">Columns</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
 
-        <div className="p-4 flex-shrink-0">
+        <div className="flex-shrink-0">
           <div className="space-y-3">
             {/* Toggle button group */}
             <ToggleGroup
@@ -127,7 +125,7 @@ export function ColumnSelector({
 
             {/* Search input */}
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={searchInputRef}
                 placeholder="Search columns..."
@@ -140,7 +138,7 @@ export function ColumnSelector({
         </div>
 
         {/* Column list */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
+        <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="text-center text-muted-foreground py-8 text-sm font-light">
               {searchTerm
