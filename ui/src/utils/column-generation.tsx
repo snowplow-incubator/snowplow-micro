@@ -183,7 +183,7 @@ export function generateColumns(
                 }
                 data-cell-clickable="true"
               >
-                <Eye className="h-3 w-3 text-muted-foreground" />
+                <Eye className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm whitespace-pre-wrap">
                   {truncateJsonForDisplay(value, fieldName, 100)}
                 </span>

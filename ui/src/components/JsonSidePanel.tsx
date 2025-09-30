@@ -22,7 +22,7 @@ export function JsonSidePanel({
     <TooltipProvider>
       <div className="w-96 min-w-[400px] flex-shrink-0 border-l bg-background h-full overflow-hidden flex flex-col">
         {/* Header with title and close button */}
-        <div className="border-b bg-background p-4">
+        <div className="bg-background p-4">
           <div className="flex items-center justify-between">
             <TruncatedColumnName
               columnMetadata={createColumnMetadata(title)}

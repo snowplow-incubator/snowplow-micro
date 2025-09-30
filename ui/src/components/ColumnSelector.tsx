@@ -81,7 +81,7 @@ export function ColumnSelector({
     <TooltipProvider>
       <div className="border-l bg-background h-full overflow-hidden flex flex-col">
         {/* Header with title and close button */}
-        <div className="border-b bg-background p-4">
+        <div className="bg-background p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-light truncate">Columns</h2>
             <Button

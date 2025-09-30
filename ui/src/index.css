@@ -11,6 +11,9 @@
   --color-failure: rgb(234, 130, 123);
   --color-failure-dark: rgb(145, 31, 23);
   --color-failure-light: rgb(242, 176, 171);
+  --color-page-background: #F9FAFB;
+  --color-focus: #C2ADE6;
+  --color-last-refreshed: #4B5563;
 }
 
 :root {
