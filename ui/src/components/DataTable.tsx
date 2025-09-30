@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/input'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-import { generateColumns } from '@/utils/column-generation'
+import { generateColumns, type EventColumnDef, type EventColumnMeta } from '@/utils/column-generation'
 import type { Event } from '@/services/api'
 import { type ColumnMetadata } from '@/utils/column-metadata'
 import { ColumnAutocomplete } from '@/components/ColumnAutocomplete'
@@ -75,7 +75,7 @@ export function DataTable({
   // Events are already in the correct format for react-table
 
   // Generate columns dynamically
-  const columns = useMemo(() => {
+  const columns: EventColumnDef[] = useMemo(() => {
     return generateColumns(
       selectedColumns,
       events,
@@ -146,13 +146,13 @@ export function DataTable({
                     <TableRow key={`${headerGroup.id}-filters`}>
                       {headerGroup.headers.map((header) => (
                         <TableHead key={`${header.id}-filter`} className="p-2">
-                          {header.column.columnDef.meta?.eventStatusFilter ? (
+                          {(header.column.columnDef.meta as EventColumnMeta)?.eventStatusFilter ? (
                             <StatusDropdown
                               value={eventFilter}
                               onChange={onEventFilterChange}
                             />
                           ) : header.column.getCanFilter() ? (
-                            header.column.columnDef.meta?.useAutocomplete ? (
+                            (header.column.columnDef.meta as EventColumnMeta)?.useAutocomplete ? (
                               <ColumnAutocomplete
                                 value={(header.column.getFilterValue() as string) ?? ''}
                                 onChange={(value) => {
@@ -160,7 +160,7 @@ export function DataTable({
                                     value === '' ? undefined : value
                                   )
                                 }}
-                                options={header.column.columnDef.meta?.distinctValues || []}
+                                options={(header.column.columnDef.meta as EventColumnMeta)?.distinctValues || []}
                                 placeholder="Filter..."
                               />
                             ) : (

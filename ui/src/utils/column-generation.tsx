@@ -11,6 +11,16 @@ import {
 } from './json-fields'
 import { type ColumnMetadata } from './column-metadata'
 
+export type EventColumnMeta = {
+  eventStatusFilter?: boolean
+  useAutocomplete?: boolean
+  distinctValues?: string[]
+}
+
+export type EventColumnDef = ColumnDef<Event> & {
+  meta?: EventColumnMeta
+}
+
 
 /**
  * Get distinct values for a column from the data
@@ -42,8 +52,8 @@ export function generateColumns(
   selectedCellId: string | null,
   onJsonCellToggle: (cellId: string, value: any, title: string) => void,
   onReorderColumns: (fromIndex: number, toIndex: number) => void
-): ColumnDef<Event>[] {
-  const columns: ColumnDef<Event>[] = []
+): EventColumnDef[] {
+  const columns: EventColumnDef[] = []
 
   // Pinned status column
   columns.push({
@@ -120,7 +130,7 @@ export function generateColumns(
       : []
     const useAutocomplete = distinctValues.length > 0 && distinctValues.length <= 10
 
-    const columnDef: ColumnDef<Event> = {
+    const columnDef: EventColumnDef = {
       id: fieldName,
       accessorFn: columnMetadata.accessor,
       meta: {
