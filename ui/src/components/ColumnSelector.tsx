@@ -143,8 +143,8 @@ export function ColumnSelector({
           {filtered.length === 0 ? (
             <div className="text-center text-muted-foreground py-8 text-sm font-light">
               {searchTerm
-                ? `No columns found matching "${searchTerm}"`
-                : 'No columns found'}
+                ? `No columns matching "${searchTerm}"`
+                : 'No columns'}
             </div>
           ) : (
             filtered.map((columnMetadata) => {

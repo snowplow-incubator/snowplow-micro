@@ -5,7 +5,7 @@ import type { Event } from '@/services/api'
  */
 export function hasFailureData(event: Event): boolean {
   const failureData = event.contexts_com_snowplowanalytics_snowplow_failure_1
-  return failureData && Array.isArray(failureData) && failureData.length > 0
+  return failureData !== undefined && failureData !== null && Array.isArray(failureData) && failureData.length > 0
 }
 
 /**

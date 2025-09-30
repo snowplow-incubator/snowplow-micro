@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/tooltip'
 import { RefreshCw, Trash2, Columns3Cog, FilterX, MoreVertical } from 'lucide-react'
 import { type ColumnFiltersState } from '@tanstack/react-table'
-import { hasFailureData, roundToMinute } from '@/utils/event-utils'
+import { roundToMinute } from '@/utils/event-utils'
 
 function App() {
   const [events, setEvents] = useState<Event[]>([])
@@ -26,9 +26,6 @@ function App() {
     value: any
     title: string
   } | null>(null)
-  const [eventFilter, setEventFilter] = useState<'all' | 'valid' | 'failed'>(
-    'all'
-  )
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [selectedMinute, setSelectedMinute] = useState<string | null>(null)
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null)
@@ -52,15 +49,8 @@ function App() {
   const { availableColumns, selectedColumns, toggleColumn, reorderColumns } =
     useColumnManager({ events, setColumnFilters, onColumnAdded: scrollToLastColumn })
 
-  // Filter events based on status and time
+  // Filter events based on selected minute
   const filteredEvents = events.filter((event) => {
-    // Filter by status
-    if (eventFilter !== 'all') {
-      const hasFailures = hasFailureData(event)
-      if (eventFilter === 'valid' && hasFailures) return false
-      if (eventFilter === 'failed' && !hasFailures) return false
-    }
-
     // Filter by selected minute
     if (selectedMinute && event.collector_tstamp) {
       const eventTime = new Date(event.collector_tstamp).getTime()
@@ -97,6 +87,7 @@ function App() {
     try {
       await EventsApiService.resetEvents()
       setEvents([])
+      setSelectedMinute(null)
     } catch (err) {
       console.error('Failed to reset events:', err)
     } finally {
@@ -159,11 +150,10 @@ function App() {
 
   // Check if any filters are active
   const hasActiveFilters =
-    eventFilter !== 'all' || selectedMinute !== null || columnFilters.length > 0
+    selectedMinute !== null || columnFilters.length > 0
 
   // Reset all filters
   const resetAllFilters = () => {
-    setEventFilter('all')
     setSelectedMinute(null)
     setColumnFilters([])
   }
@@ -171,10 +161,6 @@ function App() {
   // Get active filters for tooltip
   const getActiveFilters = () => {
     const filters: string[] = []
-
-    if (eventFilter !== 'all') {
-      filters.push(`Event type: ${eventFilter}`)
-    }
 
     if (selectedMinute) {
       const date = new Date(selectedMinute)
@@ -313,39 +299,30 @@ function App() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content */}
-          {/* Loading State */}
-          {isLoading && events.length === 0 ? (
-            <div className="flex items-center justify-center h-full w-full">
-              <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-              <span className="font-light">Loading events...</span>
-            </div>
-          ) : (
-            <div className="h-full p-4 min-w-0 flex flex-1 flex-col gap-4">
-              {/* Events Chart */}
-              <EventsChart
-                events={events}
-                selectedMinute={selectedMinute}
-                onMinuteClick={setSelectedMinute}
-              />
+        <div className="h-full p-4 min-w-0 flex flex-1 flex-col gap-4">
+          {/* Events Chart */}
+          <EventsChart
+            events={events}
+            selectedMinute={selectedMinute}
+            onMinuteClick={setSelectedMinute}
+          />
 
-              {/* Data Table */}
-              <div className="flex-1 min-h-0">
-                <DataTable
-                  events={filteredEvents}
-                  selectedColumns={selectedColumns}
-                  selectedCellId={selectedCellId}
-                  columnFilters={columnFilters}
-                  setColumnFilters={setColumnFilters}
-                  eventFilter={eventFilter}
-                  onEventFilterChange={setEventFilter}
-                  onJsonCellToggle={toggleJsonPanel}
-                  onReorderColumns={reorderColumns}
-                  onRowClick={handleRowClick}
-                  selectedRowId={selectedRowId}
-                />
-              </div>
-            </div>
-          )}
+          {/* Data Table */}
+          <div className="flex-1 min-h-0">
+            <DataTable
+              events={filteredEvents}
+              selectedColumns={selectedColumns}
+              selectedCellId={selectedCellId}
+              columnFilters={columnFilters}
+              setColumnFilters={setColumnFilters}
+              selectedMinute={selectedMinute}
+              onJsonCellToggle={toggleJsonPanel}
+              onReorderColumns={reorderColumns}
+              onRowClick={handleRowClick}
+              selectedRowId={selectedRowId}
+            />
+          </div>
+        </div>
 
         {/* Column Selector Sidebar */}
         {showColumnSelector && (

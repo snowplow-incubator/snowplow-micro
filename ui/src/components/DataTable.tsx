@@ -41,8 +41,7 @@ type DataTableProps = {
   selectedCellId: string | null
   columnFilters: ColumnFiltersState
   setColumnFilters: OnChangeFn<ColumnFiltersState>
-  eventFilter: 'all' | 'valid' | 'failed'
-  onEventFilterChange: (filter: 'all' | 'valid' | 'failed') => void
+  selectedMinute: string | null
   onJsonCellToggle: (cellId: string, value: any, title: string) => void
   onReorderColumns: (fromIndex: number, toIndex: number) => void
   onRowClick: (rowId: string, event: Event) => void
@@ -55,8 +54,7 @@ export function DataTable({
   selectedCellId,
   columnFilters,
   setColumnFilters,
-  eventFilter,
-  onEventFilterChange,
+  selectedMinute,
   onJsonCellToggle,
   onReorderColumns,
   onRowClick,
@@ -83,7 +81,7 @@ export function DataTable({
       onJsonCellToggle,
       onReorderColumns
     )
-  }, [selectedColumns, events, selectedCellId, eventFilter, onEventFilterChange, onJsonCellToggle, onReorderColumns])
+  }, [selectedColumns, events, selectedCellId, onJsonCellToggle, onReorderColumns])
 
   const table = useReactTable({
     data: events,
@@ -112,20 +110,12 @@ export function DataTable({
   const startRow = pageIndex * pageSize + 1
   const endRow = Math.min((pageIndex + 1) * pageSize, totalRows)
 
-  if (events.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground font-light">
-        No events to display.
-      </div>
-    )
-  }
-
   return (
     <TooltipProvider delayDuration={300}>
       <DndProvider backend={HTML5Backend}>
         <div className="h-full flex flex-col">
           {/* Table container with scrolling */}
-          <div className="flex-1 overflow-auto rounded-md border">
+          <div className="flex-1 overflow-auto rounded-md border bg-background">
             <Table className="table-auto">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -148,8 +138,10 @@ export function DataTable({
                         <TableHead key={`${header.id}-filter`} className="p-2">
                           {(header.column.columnDef.meta as EventColumnMeta)?.eventStatusFilter ? (
                             <StatusDropdown
-                              value={eventFilter}
-                              onChange={onEventFilterChange}
+                              value={(header.column.getFilterValue() as 'valid' | 'failed') ?? 'all'}
+                              onChange={(value) => {
+                                header.column.setFilterValue(value === 'all' ? undefined : value)
+                              }}
                             />
                           ) : header.column.getCanFilter() ? (
                             (header.column.columnDef.meta as EventColumnMeta)?.useAutocomplete ? (
@@ -221,9 +213,20 @@ export function DataTable({
                   <TableRow>
                     <TableCell
                       colSpan={columns.length}
-                      className="h-24 text-center"
+                      className="py-12 text-center"
                     >
-                      No events found.
+                      {(() => {
+                        const hasColumnFilters = columnFilters.length > 0
+                        const hasSelectedMinute = selectedMinute !== null
+
+                        if (hasColumnFilters && hasSelectedMinute) {
+                          return "No events matching filters and selected time"
+                        } else if (hasColumnFilters) {
+                          return "No events matching filters"
+                        } else {
+                          return "No events"
+                        }
+                      })()}
                     </TableCell>
                   </TableRow>
                 )}
@@ -232,14 +235,12 @@ export function DataTable({
           </div>
 
           {/* Footer with row count and pagination - single line */}
-          <div className="mt-4 flex items-center justify-between flex-shrink-0">
+          {totalRows > 0 && (<div className="mt-4 flex items-center justify-between flex-shrink-0">
             {/* Row count on the left */}
             <div className="text-sm text-muted-foreground font-light">
-              {totalRows === 0
-                ? 'No events found'
-                : totalRows === events.length
-                  ? `Showing ${startRow}-${endRow} of ${totalRows} events`
-                  : `Showing ${startRow}-${endRow} of ${totalRows} events (filtered from ${events.length} total)`}
+              {totalRows === events.length
+                ? `Showing ${startRow}-${endRow} of ${totalRows} events`
+                : `Showing ${startRow}-${endRow} of ${totalRows} events (filtered from ${events.length} total)`}
             </div>
 
             {/* Pagination on the right */}
@@ -270,7 +271,7 @@ export function DataTable({
                 </div>
               </div>
             )}
-          </div>
+          </div>)}
         </div>
       </DndProvider>
     </TooltipProvider>

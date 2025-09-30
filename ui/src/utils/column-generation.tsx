@@ -10,6 +10,7 @@ import {
   valueToSearchableString,
 } from './json-fields'
 import { type ColumnMetadata } from './column-metadata'
+import { hasFailureData } from './event-utils'
 
 export type EventColumnMeta = {
   eventStatusFilter?: boolean
@@ -57,20 +58,20 @@ export function generateColumns(
 
   // Pinned status column
   columns.push({
-    accessorKey: 'contexts_com_snowplowanalytics_snowplow_failure_1',
+    id: 'status',
+    accessorFn: (row) => hasFailureData(row) ? 'failed' : 'valid',
     header: () => (
       <div className="text-center">Status</div>
     ),
     meta: {
       eventStatusFilter: true,
     },
-    cell: ({ getValue, row }) => {
-      const value = getValue()
+    cell: ({ row }) => {
+      const hasFailures = hasFailureData(row.original)
       const cellId = `${row.original.event_id}-status`
       const isSelected = selectedCellId === cellId
 
-      // Handle undefined values - show OK status
-      if (value === undefined || (Array.isArray(value) && value.length === 0)) {
+      if (!hasFailures) {
         return (
           <div className="px-2 py-1 flex justify-center">
             <span className="px-3 py-1 rounded-full text-xs whitespace-nowrap bg-success-light text-success-dark font-normal flex items-center gap-1">
@@ -81,15 +82,16 @@ export function generateColumns(
         )
       }
 
-      if (Array.isArray(value) && onJsonCellToggle) {
-        const failureCount = value.length
+      const failureData = row.original.contexts_com_snowplowanalytics_snowplow_failure_1
+      if (Array.isArray(failureData) && onJsonCellToggle) {
+        const failureCount = failureData.length
         return (
           <div
             className="px-2 py-1 flex items-center justify-center gap-2 cursor-pointer group"
             onClick={() =>
               onJsonCellToggle(
                 cellId,
-                value.map((v) => ({
+                failureData.map((v) => ({
                   data: v.data,
                   errors: v.errors,
                   failureType: v.failureType,
@@ -113,11 +115,17 @@ export function generateColumns(
         )
       }
 
-      // Regular formatting for primitive values
-      return <div className="px-2 py-1">{String(value)}</div>
+      return <div className="px-2 py-1">Failed</div>
     },
     enableSorting: false,
-    enableColumnFilter: false,
+    enableColumnFilter: true,
+    filterFn: (row, _columnId, filterValue) => {
+      if (filterValue === 'all' || !filterValue) return true
+      const hasFailures = hasFailureData(row.original)
+      if (filterValue === 'valid') return !hasFailures
+      if (filterValue === 'failed') return hasFailures
+      return true
+    },
   })
 
   // Add selected columns
