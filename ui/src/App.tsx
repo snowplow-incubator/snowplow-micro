@@ -6,7 +6,6 @@ import { EventsChart } from '@/components/EventsChart'
 import { type Event, EventsApiService } from '@/services/api'
 import { useColumnManager } from '@/hooks/useColumnManager'
 import { Button } from '@/components/ui/button'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   Tooltip,
   TooltipContent,
@@ -226,59 +225,32 @@ function App() {
                 />
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  {hasActiveFilters && (
-                    <TooltipProvider>
-                      <Tooltip delayDuration={0}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={resetAllFilters}
-                          >
-                            <FilterX className="mr-2 h-4 w-4" />
-                            Reset filters
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div>
-                            <div className="font-medium">Active filters:</div>
-                            {getActiveFilters().map((filter, index) => (
-                              <div key={index} className="text-xs">
-                                • {filter}
-                              </div>
-                            ))}
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-
-                  <ToggleGroup
-                    type="single"
-                    value={eventFilter}
-                    onValueChange={(value) =>
-                      value &&
-                      setEventFilter(value as 'all' | 'valid' | 'failed')
-                    }
-                    variant="outline"
-                    size="sm"
-                  >
-                    <ToggleGroupItem value="all">All events</ToggleGroupItem>
-                    <ToggleGroupItem value="valid">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-success"></div>
-                        Valid
-                      </div>
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="failed">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-failure"></div>
-                        Failed
-                      </div>
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
+                {hasActiveFilters && (
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={resetAllFilters}
+                        >
+                          <FilterX className="mr-2 h-4 w-4" />
+                          Reset filters
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div>
+                          <div className="font-medium">Active filters:</div>
+                          {getActiveFilters().map((filter, index) => (
+                            <div key={index} className="text-xs">
+                              • {filter}
+                            </div>
+                          ))}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
 
                 <div className="flex items-center gap-2">
                   <Button
@@ -302,7 +274,7 @@ function App() {
                     onClick={toggleColumnSelector}
                   >
                     <Menu className="mr-2 h-4 w-4 rotate-90" />
-                    Columns
+                    Pick columns
                   </Button>
                 </div>
               </div>
@@ -336,6 +308,8 @@ function App() {
                     selectedCellId={selectedCellId}
                     columnFilters={columnFilters}
                     setColumnFilters={setColumnFilters}
+                    eventFilter={eventFilter}
+                    onEventFilterChange={setEventFilter}
                     onJsonCellToggle={toggleJsonPanel}
                     onReorderColumns={reorderColumns}
                     onRowClick={handleRowClick}

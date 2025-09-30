@@ -71,12 +71,18 @@ export function EventsChart({
       }
     })
 
-    // Create array with last 30 minutes, filling gaps with zero
-    const now = Date.now()
-    const thirtyMinutesAgo = now - 30 * 60 * 1000
+    // Create array with last 30 minutes from the latest event, filling gaps with zero
+    const latestEventTime = events.length > 0
+      ? Math.max(...events.map(event =>
+          event.collector_tstamp ? new Date(event.collector_tstamp).getTime() : 0
+        ))
+      : Date.now()
+
+    const endTime = roundToMinute(latestEventTime)
+    const startTime = endTime - 30 * 60 * 1000
     const data: ChartData[] = []
 
-    for (let time = thirtyMinutesAgo; time <= now; time += 60000) {
+    for (let time = startTime; time <= endTime; time += 60000) {
       const roundedTime = roundToMinute(time)
       const minuteKey = new Date(roundedTime).toISOString()
       const group = minuteGroups.get(minuteKey)

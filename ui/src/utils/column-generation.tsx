@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
-import { ArrowUp, ArrowDown, Eye } from 'lucide-react'
+import { ArrowUp, ArrowDown, Eye, Check, X } from 'lucide-react'
 import type { Event } from '@/services/api'
 import { DraggableColumn } from '@/components/DraggableColumn'
 import { TruncatedCell } from '@/components/TruncatedCell'
@@ -13,11 +13,35 @@ import { type ColumnMetadata } from './column-metadata'
 
 
 /**
+ * Get distinct values for a column from the data
+ */
+function getDistinctValues(events: Event[], columnMetadata: ColumnMetadata): string[] {
+  const values = new Set<string>()
+
+  events.forEach((event) => {
+    const value = columnMetadata.accessor(event)
+    if (value !== undefined && value !== null) {
+      if (columnMetadata.isJSON) {
+        // For JSON columns, use the searchable string representation
+        values.add(valueToSearchableString(value))
+      } else {
+        values.add(String(value))
+      }
+    }
+  })
+
+  return Array.from(values).sort()
+}
+
+/**
  * Generate columns from selected fields and available field info
  */
 export function generateColumns(
   selectedColumns: ColumnMetadata[],
+  events: Event[],
   selectedCellId: string | null,
+  eventFilter: 'all' | 'valid' | 'failed',
+  onEventFilterChange: (filter: 'all' | 'valid' | 'failed') => void,
   onJsonCellToggle: (cellId: string, value: any, title: string) => void,
   onReorderColumns: (fromIndex: number, toIndex: number) => void
 ): ColumnDef<Event>[] {
@@ -26,12 +50,11 @@ export function generateColumns(
   // Pinned status column
   columns.push({
     accessorKey: 'contexts_com_snowplowanalytics_snowplow_failure_1',
-    header: () => {
-      return (
-        <div className="flex items-center justify-center">
-          <span className="font-normal">Status</span>
-        </div>
-      )
+    header: () => (
+      <div className="text-center">Status</div>
+    ),
+    meta: {
+      eventStatusFilter: true,
     },
     cell: ({ getValue, row }) => {
       const value = getValue()
@@ -42,7 +65,8 @@ export function generateColumns(
       if (value === undefined || (Array.isArray(value) && value.length === 0)) {
         return (
           <div className="px-2 py-1 flex justify-center">
-            <span className="px-3 py-1 rounded-full text-xs whitespace-nowrap bg-success-light text-success-dark font-normal">
+            <span className="px-3 py-1 rounded-full text-xs whitespace-nowrap bg-success-light text-success-dark font-normal flex items-center gap-1">
+              <Check className="h-3 w-3" />
               Valid
             </span>
           </div>
@@ -68,12 +92,13 @@ export function generateColumns(
             data-cell-clickable="true"
           >
             <span
-              className={`px-2 py-1 rounded-full text-xs font-normal whitespace-nowrap transition-colors ${
+              className={`px-2 py-1 rounded-full text-xs font-normal whitespace-nowrap transition-colors flex items-center gap-1 ${
                 isSelected
                   ? 'bg-failure text-failure-dark'
                   : 'bg-failure-light text-failure-dark group-hover:bg-failure'
               }`}
             >
+              <X className="h-3 w-3" />
               {failureCount} {failureCount === 1 ? 'failure' : 'failures'}
             </span>
           </div>
@@ -90,41 +115,20 @@ export function generateColumns(
   // Add selected columns
   selectedColumns.forEach((columnMetadata, index) => {
     const { name: fieldName } = columnMetadata
-    // For nested fields, we need to use accessorFn instead of accessorKey
+
+    // Get distinct values for filterable columns (exclude only timestamps)
+    const distinctValues = !columnMetadata.isTimestamp
+      ? getDistinctValues(events, columnMetadata)
+      : []
+    const useAutocomplete = distinctValues.length > 0 && distinctValues.length <= 10
+
     const columnDef: ColumnDef<Event> = {
       id: fieldName,
-      ...(columnMetadata.isNested
-        ? {
-            accessorFn: (row) => {
-              const parentValue = row[columnMetadata.parentColumn!]
-              if (parentValue === undefined || parentValue === null) {
-                return undefined
-              }
-
-              try {
-                if (Array.isArray(parentValue)) {
-                  // For contexts_ arrays, extract the field from each object
-                  const results: any[] = []
-                  parentValue.forEach((item) => {
-                    if (item && typeof item === 'object' && columnMetadata.fieldName! in item) {
-                      results.push(item[columnMetadata.fieldName!])
-                    }
-                  })
-                  return results.length > 0 ? results : undefined
-                } else if (typeof parentValue === 'object') {
-                  // For unstruct_event_ objects, extract the field directly
-                  return parentValue[columnMetadata.fieldName!]
-                }
-              } catch (error) {
-                console.warn(`Failed to extract field ${fieldName}:`, error)
-              }
-
-              return undefined
-            },
-          }
-        : {
-            accessorKey: fieldName,
-          }),
+      accessorFn: columnMetadata.accessor,
+      meta: {
+        useAutocomplete,
+        distinctValues,
+      },
       header: ({ column }) => {
         return (
           <DraggableColumn index={index} onReorder={onReorderColumns}>

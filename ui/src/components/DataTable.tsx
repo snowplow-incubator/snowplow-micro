@@ -26,11 +26,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react'
 
 import { generateColumns } from '@/utils/column-generation'
 import type { Event } from '@/services/api'
 import { type ColumnMetadata } from '@/utils/column-metadata'
+import { ColumnAutocomplete } from '@/components/ColumnAutocomplete'
 
 type DataTableProps = {
   events: Event[]
@@ -39,6 +41,8 @@ type DataTableProps = {
   selectedCellId: string | null
   columnFilters: ColumnFiltersState
   setColumnFilters: OnChangeFn<ColumnFiltersState>
+  eventFilter: 'all' | 'valid' | 'failed'
+  onEventFilterChange: (filter: 'all' | 'valid' | 'failed') => void
   onJsonCellToggle: (cellId: string, value: any, title: string) => void
   onReorderColumns: (fromIndex: number, toIndex: number) => void
   onRowClick: (rowId: string, event: Event) => void
@@ -51,6 +55,8 @@ export function DataTable({
   selectedCellId,
   columnFilters,
   setColumnFilters,
+  eventFilter,
+  onEventFilterChange,
   onJsonCellToggle,
   onReorderColumns,
   onRowClick,
@@ -72,11 +78,14 @@ export function DataTable({
   const columns = useMemo(() => {
     return generateColumns(
       selectedColumns,
+      events,
       selectedCellId,
+      eventFilter,
+      onEventFilterChange,
       onJsonCellToggle,
       onReorderColumns
     )
-  }, [selectedColumns, selectedCellId, onJsonCellToggle, onReorderColumns])
+  }, [selectedColumns, events, selectedCellId, eventFilter, onEventFilterChange, onJsonCellToggle, onReorderColumns])
 
   const table = useReactTable({
     data: events,
@@ -139,21 +148,53 @@ export function DataTable({
                     <TableRow key={`${headerGroup.id}-filters`}>
                       {headerGroup.headers.map((header) => (
                         <TableHead key={`${header.id}-filter`} className="p-2">
-                          {header.column.getCanFilter() ? (
-                            <Input
-                              placeholder="Filter..."
-                              value={
-                                (header.column.getFilterValue() as string) ?? ''
+                          {header.column.columnDef.meta?.eventStatusFilter ? (
+                            <ToggleGroup
+                              type="single"
+                              value={eventFilter}
+                              onValueChange={(value) =>
+                                value &&
+                                onEventFilterChange(value as 'all' | 'valid' | 'failed')
                               }
-                              onChange={(e) => {
-                                const value = e.target.value
-                                header.column.setFilterValue(
-                                  value === '' ? undefined : value
-                                )
-                              }}
-                              className="h-8 text-xs font-light"
-                              style={{ width: '100px' }}
-                            />
+                              variant="outline"
+                              size="sm"
+                            >
+                              <ToggleGroupItem value="all">All</ToggleGroupItem>
+                              <ToggleGroupItem value="valid">
+                                <Check className="h-3 w-3 text-success-dark" />
+                              </ToggleGroupItem>
+                              <ToggleGroupItem value="failed">
+                                <X className="h-3 w-3 text-failure-dark" />
+                              </ToggleGroupItem>
+                            </ToggleGroup>
+                          ) : header.column.getCanFilter() ? (
+                            header.column.columnDef.meta?.useAutocomplete ? (
+                              <ColumnAutocomplete
+                                value={(header.column.getFilterValue() as string) ?? ''}
+                                onChange={(value) => {
+                                  header.column.setFilterValue(
+                                    value === '' ? undefined : value
+                                  )
+                                }}
+                                options={header.column.columnDef.meta?.distinctValues || []}
+                                placeholder="Filter..."
+                              />
+                            ) : (
+                              <Input
+                                placeholder="Filter..."
+                                value={
+                                  (header.column.getFilterValue() as string) ?? ''
+                                }
+                                onChange={(e) => {
+                                  const value = e.target.value
+                                  header.column.setFilterValue(
+                                    value === '' ? undefined : value
+                                  )
+                                }}
+                                className="h-8 text-xs font-light"
+                                style={{ width: '100px' }}
+                              />
+                            )
                           ) : null}
                         </TableHead>
                       ))}
