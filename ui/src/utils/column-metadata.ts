@@ -28,14 +28,14 @@ export function createColumnMetadata(columnName: string): ColumnMetadata {
 
   // Check for contexts_ prefix (removing prefix counts as truncation)
   if (displayText.startsWith('contexts_')) {
-    displayText = displayText.replace('contexts_', '')
+    displayText = displayText.replace('contexts_', '').replace('com_snowplowanalytics_snowplow_', '')
     icon = 'entity'
     wasTruncated = true
   }
 
   // Check for unstruct_event_ prefix (removing prefix counts as truncation)
   if (displayText.startsWith('unstruct_event_')) {
-    displayText = displayText.replace('unstruct_event_', '')
+    displayText = displayText.replace('unstruct_event_', '').replace('com_snowplowanalytics_snowplow_', '')
     icon = 'event'
     wasTruncated = true
   }
