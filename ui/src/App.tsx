@@ -208,7 +208,7 @@ function App() {
             <img
               src="/micro/ui/logo.svg"
               alt="Snowplow Micro"
-              className="h-8"
+              className="h-6"
             />
           </div>
           <div className="flex items-center gap-2">
