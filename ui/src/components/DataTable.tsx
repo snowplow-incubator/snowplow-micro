@@ -237,7 +237,7 @@ export function DataTable({
           {/* Footer with row count and pagination - single line */}
           {totalRows > 0 && (<div className="mt-4 flex items-center justify-between flex-shrink-0">
             {/* Row count on the left */}
-            <div className="text-sm text-muted-foreground font-light">
+            <div className="text-xs text-pagination font-light">
               {totalRows === events.length
                 ? `Showing ${startRow}-${endRow} of ${totalRows} events`
                 : `Showing ${startRow}-${endRow} of ${totalRows} events (filtered from ${events.length} total)`}
@@ -246,7 +246,7 @@ export function DataTable({
             {/* Pagination on the right */}
             {totalRows > pageSize && (
               <div className="flex items-center space-x-4">
-                <div className="text-sm text-muted-foreground font-light">
+                <div className="text-xs text-pagination font-light">
                   Page {pageIndex + 1} of {table.getPageCount()}
                 </div>
                 <div className="flex items-center space-x-2">

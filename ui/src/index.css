@@ -15,6 +15,7 @@
   --color-page-background: #F9FAFB;
   --color-focus: #C2ADE6;
   --color-last-refreshed: #4B5563;
+  --color-pagination: #6B7280;
   --color-background: white;
 }
 
@@ -71,4 +72,17 @@ body {
 
 * {
   border-color: hsl(var(--border));
+}
+
+::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 4px;
+    height: 4px;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background-color: rgba(0,0,0,.2);
 }
