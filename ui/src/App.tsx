@@ -101,18 +101,10 @@ function App() {
     setJsonPanelData(null)
   }
 
-  const toggleColumnSelector = () => {
-    setShowColumnSelector((prev) => !prev)
-    if (!showColumnSelector) {
-      closeJsonPanel()
-    }
-  }
-
   const openJsonPanel = (cellId: string, value: any, title: string) => {
     setSelectedCellId(cellId)
     setSelectedRowId(null)
     setJsonPanelData({ value, title })
-    setShowColumnSelector(false)
 
     setTimeout(() => {
       const selectedElement = document.querySelector(
@@ -143,7 +135,6 @@ function App() {
       setSelectedRowId(rowId)
       setSelectedCellId(null)
       setJsonPanelData({ value: event, title: 'Full event' })
-      setShowColumnSelector(false)
     }
   }
 
@@ -175,24 +166,6 @@ function App() {
 
     return filters
   }
-
-  // Handle ESC key to close side panels
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (showColumnSelector) {
-          setShowColumnSelector(false)
-        } else if (jsonPanelData) {
-          closeJsonPanel()
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [showColumnSelector, jsonPanelData])
 
   // Initial load
   useEffect(() => {
@@ -257,7 +230,7 @@ function App() {
             <Button
               variant={showColumnSelector ? 'outlineActive' : 'outline'}
               size="sm"
-              onClick={toggleColumnSelector}
+              onClick={() => setShowColumnSelector(!showColumnSelector)}
             >
               <Columns3Cog className="mr-2 h-4 w-4" />
               Pick columns
@@ -324,18 +297,6 @@ function App() {
           </div>
         </div>
 
-        {/* Column Selector Sidebar */}
-        {showColumnSelector && (
-          <div className="w-80 min-w-[200px] flex-shrink-0">
-            <ColumnSelector
-              availableColumns={availableColumns}
-              selectedColumns={selectedColumns}
-              onToggleColumn={toggleColumn}
-              onClose={() => setShowColumnSelector(false)}
-            />
-          </div>
-        )}
-
         {/* JSON Side Panel */}
         {jsonPanelData && (
           <JsonSidePanel
@@ -350,6 +311,18 @@ function App() {
                   : undefined
             }
           />
+        )}
+
+        {/* Column Selector Sidebar */}
+        {showColumnSelector && (
+          <div className="w-80 min-w-[200px] flex-shrink-0">
+            <ColumnSelector
+              availableColumns={availableColumns}
+              selectedColumns={selectedColumns}
+              onToggleColumn={toggleColumn}
+              onClose={() => setShowColumnSelector(false)}
+            />
+          </div>
         )}
       </div>
     </div>

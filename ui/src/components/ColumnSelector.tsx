@@ -25,6 +25,7 @@ export function ColumnSelector({
   const [selectedTab, setSelectedTab] = useState<
     'selected' | 'atomic' | 'events' | 'entities'
   >('selected')
+  const [initiallySelected] = useState<Set<string>>(new Set(selectedColumns.map(col => col.name)))
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Auto-focus search input when component mounts or tab changes
@@ -39,9 +40,9 @@ export function ColumnSelector({
   const filtered = availableColumns
     .filter((columnMetadata) => {
       const { name } = columnMetadata
-      // Handle "Selected" tab - show only selected columns
+      // Handle "Selected" tab - show initially selected columns OR currently selected columns
       if (selectedTab === 'selected') {
-        const matchesSelection = selected.has(name)
+        const matchesSelection = initiallySelected.has(name) || selected.has(name)
         if (!matchesSelection) return false
 
         // Filter by search term - search the full column name for selected tab
