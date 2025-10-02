@@ -72,7 +72,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val expected = "Error while validating the event"
       sink.validateEvent(withoutEvent).value.map {
         _ must beLike {
-          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
+          case OptionIor.Both((errors, _), _) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -82,7 +82,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val expected = "Error while validating the event"
       sink.validateEvent(raw).value.map {
         _ must beLike {
-          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
+          case OptionIor.Both((errors, _), _) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -92,7 +92,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val expected = "Error while validating the event"
       sink.validateEvent(raw).value.map {
         _ must beLike {
-          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
+          case OptionIor.Both((errors, _), _) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -102,7 +102,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val expected = "Error while validating the event"
       sink.validateEvent(raw).value.map {
         _ must beLike {
-          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
+          case OptionIor.Both((errors, _), _) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -112,7 +112,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val expected = "Error while validating the event"
       sink.validateEvent(raw).value.map {
         _ must beLike {
-          case OptionIor.Left((errors, _)) if errors.exists(_.contains(expected)) => ok
+          case OptionIor.Both((errors, _), _) if errors.exists(_.contains(expected)) => ok
         }
       }
     }
@@ -122,7 +122,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val expected = "page_ping"
       sink.validateEvent(raw).value.map {
         _ must beLike {
-          case OptionIor.Right(GoodEvent(_, typE, _, _, _)) if typE === Some(expected) => ok
+          case OptionIor.Right(GoodEvent(_, typE, _, _, _, _)) if typE === Some(expected) => ok
         }
       }
     }
@@ -132,7 +132,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val expected = schemaLinkClick
       sink.validateEvent(raw).value.map {
         _ must beLike {
-          case OptionIor.Right(GoodEvent(_, _, schema, _, _)) if schema === Some(expected) => ok
+          case OptionIor.Right(GoodEvent(_, _, schema, _, _, _)) if schema === Some(expected) => ok
         }
       }
     }
@@ -142,7 +142,7 @@ class MemorySinkSpec extends CatsResource[IO, MemorySink] with SpecificationLike
       val expected = List(schemaLinkClick, schemaMobileContext)
       sink.validateEvent(raw).value.map {
         _ must beLike {
-          case OptionIor.Right(GoodEvent(_, _, _, contexts, _)) if contexts === expected => ok
+          case OptionIor.Right(GoodEvent(_, _, _, contexts, _, _)) if contexts === expected => ok
         }
       }
     }

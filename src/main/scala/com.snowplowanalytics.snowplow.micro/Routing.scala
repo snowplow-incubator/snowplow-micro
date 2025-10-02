@@ -35,6 +35,8 @@ final class Routing(igluResolver: Resolver[IO])
   val value: HttpRoutes[IO] = HttpRoutes.of[IO] {
     case request@method -> "micro" /: path =>
       (method, path.segments.head.encoded) match {
+        case (GET, "events") =>
+          Ok(ValidationCache.getGoodAndIncomplete.map(_.event.toJson(lossy = true)))
         case (POST | GET, "all") =>
           Ok(ValidationCache.getSummary())
         case (POST | GET, "reset") =>
