@@ -34,37 +34,37 @@ final class Routing(igluResolver: Resolver[IO])
 
   val value: HttpRoutes[IO] = HttpRoutes.of[IO] {
     case request@method -> "micro" /: path =>
-      (method, path.segments.head.encoded) match {
-        case (GET, "events") =>
+      (method, path.segments.headOption.map(_.encoded)) match {
+        case (GET, Some("events")) =>
           Ok(ValidationCache.getGoodAndIncomplete.map(_.event.toJson(lossy = true)))
-        case (POST | GET, "all") =>
+        case (POST | GET, Some("all")) =>
           Ok(ValidationCache.getSummary())
-        case (POST | GET, "reset") =>
+        case (POST | GET, Some("reset")) =>
           ValidationCache.reset()
           Ok(ValidationCache.getSummary())
-        case (GET, "good") =>
+        case (GET, Some("good")) =>
           Ok(ValidationCache.filterGood(FiltersGood(None, None, None, None)))
-        case (POST, "good") =>
+        case (POST, Some("good")) =>
           request.as[FiltersGood].flatMap { filters =>
             Ok(ValidationCache.filterGood(filters).asJson)
           }
-        case (GET, "bad") =>
+        case (GET, Some("bad")) =>
           Ok(ValidationCache.filterBad(FiltersBad(None, None, None)))
-        case (POST, "bad") =>
+        case (POST, Some("bad")) =>
           request.as[FiltersBad].flatMap { filters =>
             Ok(ValidationCache.filterBad(filters))
           }
-        case (GET, "iglu") =>
+        case (GET, Some("iglu")) =>
           path match {
             case Path.empty / "iglu" / vendor / name / "jsonschema" / versionVar =>
               lookupSchema(vendor, name, versionVar)
             case _ =>
               NotFound("Schema lookup should be in format iglu/{vendor}/{schemaName}/jsonschema/{model}-{revision}-{addition}")
           }
-        case (GET, "ui") =>
+        case (GET, Some("ui")) =>
           handleUIPath(path)
         case _ =>
-          NotFound("Path for micro has to be one of: /all /good /bad /reset /iglu")
+          NotFound("Path for micro has to be one of: /events /all /good /bad /reset /iglu")
       }
   }
 

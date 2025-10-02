@@ -136,7 +136,7 @@ export function generateColumns(
     const distinctValues = !columnMetadata.isTimestamp
       ? getDistinctValues(events, columnMetadata)
       : []
-    const useAutocomplete = distinctValues.length > 0 && distinctValues.length <= 10
+    const useAutocomplete = distinctValues.length > 0 && distinctValues.length <= 20
 
     const columnDef: EventColumnDef = {
       id: fieldName,
