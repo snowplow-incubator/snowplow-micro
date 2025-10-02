@@ -27,12 +27,12 @@ export function JsonViewer({
   // Helper to render key part
   const renderKey = (isClickable = false) => {
     if (keyName === undefined || keyName === null) return null
-    const keyText = typeof keyName === 'string' ? `"${keyName}"` : keyName
+    const keyText = typeof keyName === 'string' ? `"${keyName}"` : `${keyName}`
 
     if (isClickable) {
       return (
         <span
-          className="text-gray-600 text-xs font-mono cursor-pointer"
+          className={`text-gray-600 text-xs font-mono ${keyText.length > 30 && 'break-all'} cursor-pointer`}
           onClick={handleToggleExpanded}
         >
           {keyText}:
@@ -40,7 +40,7 @@ export function JsonViewer({
       )
     }
 
-    return <span className="text-gray-600 text-xs font-mono">{keyText}:</span>
+    return <span className={`text-gray-600 text-xs ${keyText.length > 30 && 'break-all'} font-mono`}>{keyText}:</span>
   }
 
   if (data === null) {
