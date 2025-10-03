@@ -1,3 +1,9 @@
+Version 3.0.0 (2025-10-03)
+--------------------------
+Add an endpoint that returns all events using the new failed event format (#169)
+Add a brand new UI (#171)
+
+
 Version 2.4.0 (2025-09-26)
 --------------------------
 Add --output-json option for JSON event output (#164)
